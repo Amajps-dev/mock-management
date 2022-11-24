@@ -1,0 +1,15 @@
+trigger:
+- "main"
+- "develop"
+
+pool:
+  vmImage: ubuntu-latest
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: 'smarter/pipelines'
+
+stages:
+- template: src/nuget/template-nuget.yml@templates

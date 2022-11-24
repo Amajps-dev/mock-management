@@ -1,0 +1,22 @@
+parameters:
+  sonarProjectName: ""
+
+stages:
+- stage: Build
+  displayName: Build
+  jobs:
+    - job: Build
+      displayName: Build
+      steps:
+        - template: build-nuget.yml
+          parameters:
+          sonarProjectName: ${{ parameters.sonarProjectName }}
+
+- stage: Release
+  displayName: Release
+  condition: ne(variables['Build.Reason'], 'PullRequest')
+  jobs:
+    - job: Release
+      displayName: Release
+      steps:
+        - template: release-nuget.yml
