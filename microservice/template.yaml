@@ -1,0 +1,23 @@
+stages:
+  - stage: build
+    displayName: Build
+    jobs:
+      - template: build.yaml
+
+  #################
+  # Deploy to DEV #
+  #################
+  - stage:
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    displayName: DEV
+    variables:
+      - group: Deployment-Variables-Dev
+    jobs:
+    - template: deploy.yaml
+      parameters:
+        pool: '${{ variables.PoolName }}'
+        environment: 'dev'
+        aspNetCoreEnvironment: 'Dev'
+        namespace: '${{ parameters.namespace }}'
+        azureServiceConnection: '${{ variables.AzureServiceConnection }}'
+        acrName: '${{ variables.AcrName }}'

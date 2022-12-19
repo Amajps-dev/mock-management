@@ -1,0 +1,49 @@
+jobs:
+- job: lintPR
+  displayName: Lint PullRequest
+  steps: 
+  - checkout: pipelines
+
+  - task: NodeTool@0
+    displayName: Use node v16
+    inputs:
+      versionSpec: '16.x'
+      
+  - task: Npm@1
+    displayName: Install NPM packages
+    inputs:
+      command: 'install'
+      workingDir: 'commitLint'
+  
+  - bash: |
+      PR_TITLE="$(curl --silent -u azdo:$SYSTEM_ACCESSTOKEN \
+      $(System.CollectionUri)_apis/git/repositories/$(Build.Repository.ID)/pullRequests/$(System.PullRequest.PullRequestId)?api-version=5.1 \
+      | jq -r .title)"
+      echo "##vso[task.setvariable variable=Pr.Title]$PR_TITLE"          
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    displayName: Get PullRequest title
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+
+  - pwsh: |
+      try { &commitlint --version } catch { npm install commitlint -g }
+
+      $result = $($ENV:PR_TITLE | commitlint)
+      if ($LASTEXITCODE -eq 1) {
+        $result | Select-Object -Skip 1 |  ForEach-Object {
+          if ($_ -match '✖') {
+            Write-Host "##vso[task.logissue type=error]$_"
+          } else {
+            Write-Host "##[info]$_"
+          }
+        }
+        # Write-Host "##vso[task.logissue type=error] Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
+
+        exit 1
+      } else {
+        Write-Host "✅ PR Title looks good. Nice work! 👍"
+      }
+    displayName: Check conventional commit PullRequest title
+    failOnStderr: true
+    ignoreLASTEXITCODE: true
+    workingDirectory: 'commitLint'

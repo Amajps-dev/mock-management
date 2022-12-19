@@ -1,67 +1,85 @@
-- stage: DockerizeMicroservice
+parameters:
+- name: pool
+  type: string
+- name: environment
+  type: string
+- name: aspNetCoreEnvironment
+  type: string
+- name: namespace
+  type: string
+- name: azureServiceConnection
+  type: string
+- name: acrName
+  type: string
+
+jobs:
+- deployment: 
+  environment: Dev
+  displayName: To remove
+- job: DockerizeMicroservice
   displayName: 'Dockerize microservice'
-  dependsOn: ['Build_UnitTest']
-  jobs:
-  - job: DockerizeMicroservice
-    displayName: 'Dockerize microservice'
-    timeoutInMinutes: 10
-    pool: 
-      vmImage: 'ubuntu-latest'
-    steps:
-    - checkout: self
-    - task: DownloadBuildArtifacts@1
-      displayName: Download application
-      inputs:
-        buildType: 'current'
-        downloadType: 'single'
-        artifactName: artifact
-        downloadPath: '$(System.ArtifactsDirectory)'
+  timeoutInMinutes: 10
+  pool: 
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
 
-    - template: steps/build/docker-build-push.yml@pipeline-templates-paas2
-      parameters:
-        imageRepositoryName: $(microserviceName)
-        dockerfilePath: '**/*Dockerfile'
-        dockerRegistryServiceConnection: 'ContainerRegistry_MGMT'
-        buildContext: '$(System.ArtifactsDirectory)'
-- stage:
-  displayName: Deploy to Dev PAAS2
-  dependsOn: ['DockerizeMicroservice']
-  jobs:
-  - template: jobs/deploy/request-azdo-agent.yml@pipeline-templates-paas2
+  - task: DownloadBuildArtifacts@1
+    displayName: Download application
+    inputs:
+      buildType: 'current'
+      downloadType: 'single'
+      artifactName: artifact
+      downloadPath: '$(System.ArtifactsDirectory)'
+
+  - template: steps/build/docker-build-push.yml@pipeline-templates-paas2
     parameters:
-      azureServiceConnection: 'Azure_DEV'
-      environment: 'DEV'
-      entityCode: 'esm'
+      imageRepositoryName: $(microserviceName)
+      dockerfilePath: '**/*Dockerfile'
+      dockerRegistryServiceConnection: 'ContainerRegistry_MGMT'
+      buildContext: '$(System.ArtifactsDirectory)'
 
-  - job: 
-    displayName: Push to container registry
-    pool: 'SmartER-dev'
-    dependsOn: ['RequestAzDOAgent']
-    steps:
-    - checkout: self
-    
-    - template: steps/deploy/docker-pull-push.yml@pipeline-templates-paas2
-      parameters:
-        azureServiceConnectionSrc: '${{ variables.AzureServiceConnectionMgmt }}'
-        acrNameSrc: '${{ variables.AcrNameMgmt }}'
-        azureServiceConnectionDest: '${{ variables.AzureServiceConnectionDev }}'
-        acrNameDest: '${{ variables.AcrNameDev }}'
-        imageRepositoryName: $(microserviceName)
-    - powershell: |
-        $content = (Get-Content $(Build.SourcesDirectory)/manifest.yaml)
-        $content = $content.replace('#{microserviceName}#', '$(microserviceName)')
-        $content = $content.replace('#{environment}#', '${{ parameters.namespace_env }}')
-        $content = $content.replace('#{microserviceVersion}#', '$(Build.BuildNumber)')
-        $content = $content.replace('#{acrName}#', '${{ variables.AcrNameDev }}')
-        $content = $content.replace('#{namespace}#', '${{ parameters.namespace }}')
-        $content = $content.replace('#{AspNetCoreEnvironment}#', 'Dev')
-        Set-Content -Path $(Build.SourcesDirectory)/manifest.yaml -Value $content
-        Get-Content $(Build.SourcesDirectory)/manifest.yaml
-      displayName: Replace manifest variables
+- template: jobs/deploy/request-azdo-agent.yml@pipeline-templates-paas2
+  parameters:
+    azureServiceConnection: 'Azure_DEV'
+    environment: 'DEV'
+    entityCode: 'esm'
 
-    - template: steps/deploy/kube-apply.yml@pipeline-templates-paas2
-      parameters:
-        azureServiceConnection: ${{ variables.AzureServiceConnectionDev }}
-        configFile: '$(Build.SourcesDirectory)/manifest.yaml'
-        kubeRg: '${{ variables.AksResourceGroup }}'
-        kubeName: '${{ variables.AksName }}'
+- job: 
+  displayName: Push to container registry
+  dependsOn: ['RequestAzDOAgent']
+  pool: 'SmartER-dev'
+  variables:
+    azureServiceConnectionDEV: 'Azure_DEV'
+    azureServiceConnectionMgmt: 'Azure_MGMT'
+    acrNameMgmt: 'esmglobalinteg1acrm'
+    acrNameDEV: 'esmappinteg1acrd'
+  steps:
+  - checkout: self
+  
+  - template: steps/deploy/docker-pull-push.yml@pipeline-templates-paas2
+    parameters:
+      azureServiceConnectionSrc: '${{ variables.azureServiceConnectionMgmt }}'
+      acrNameSrc: '${{ variables.acrNameMgmt }}'
+      azureServiceConnectionDest: '${{ variables.azureServiceConnectionDEV }}'
+      acrNameDest: '${{ variables.acrNameDEV }}'
+      imageRepositoryName: $(microserviceName)
+
+  - powershell: |
+      $content = (Get-Content $(Build.SourcesDirectory)/manifest.yaml)
+      $content = $content.replace('#{microserviceName}#', '$(microserviceName)')
+      $content = $content.replace('#{environment}#', '${{ parameters.environment }}')
+      $content = $content.replace('#{microserviceVersion}#', '$(Build.BuildNumber)')
+      $content = $content.replace('#{acrName}#', '${{ variables.acrNameDEV }}')
+      $content = $content.replace('#{namespace}#', '${{ parameters.namespace }}')
+      $content = $content.replace('#{AspNetCoreEnvironment}#', 'Dev')
+      Set-Content -Path $(Build.SourcesDirectory)/manifest.yaml -Value $content
+      Get-Content $(Build.SourcesDirectory)/manifest.yaml
+    displayName: Replace manifest variables
+
+  - template: steps/deploy/kube-apply.yml@pipeline-templates-paas2
+    parameters:
+      azureServiceConnection: ${{ variables.azureServiceConnectionDEV }}
+      configFile: '$(Build.SourcesDirectory)/manifest.yaml'
+      kubeRg: 'smarter-app-integ-dev-rg'
+      kubeName: 'esm-app-integ-1-aks-d'

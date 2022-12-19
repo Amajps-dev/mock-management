@@ -1,0 +1,89 @@
+trigger:
+- main
+
+resources:
+  repositories:
+    - repository: pipelines
+      type: git
+      name: SmartER/Pipelines
+      ref: features/eb/microservice
+    - repository: dom-contact-api
+      type: git
+      name: SmartER/dom-contact-api
+    - repository: pipeline-templates-paas2
+      type: git
+      name: SmartER-PaaSAsProduct/Pipelines.Templates
+      
+stages:
+- stage: build
+  pool:
+    vmImage: 'windows-latest'
+  jobs:
+  - job:
+    steps:
+    - checkout: dom-contact-api
+    - task: MSBuild@1
+      inputs:
+        solution: '**/*.sqlproj'
+        msbuildArguments: '/p:OutDir=$(Build.BinariesDirectory) /p:AssemblyName=$(Build.Repository.Name)'
+    
+
+    # - task: PublishPipelineArtifact@1
+    #   displayName: 'Publish dacpac artifact'
+    #   condition: ne(variables['Build.Reason'], 'PullRequest')
+    #   inputs:
+    #     targetPath: '$(Build.BinariesDirectory)'
+    #     artifact: '$(Build.Repository.Name)'
+    #     publishLocation: 'pipeline'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish dacpac artifact'
+      condition: ne(variables['Build.Reason'], 'PullRequest')
+      inputs:
+        PathtoPublish: '$(Build.BinariesDirectory)'
+        ArtifactName: $(Build.Repository.Name)
+        publishLocation: 'Container'
+
+- stage: deployDev
+  displayName: 'Deploy to Dev'
+  jobs:
+  - template: jobs/deploy/request-azdo-agent.yml@pipeline-templates-paas2
+    parameters:
+      azureServiceConnection: 'Azure_DEV'
+      environment: 'DEV'
+      entityCode: 'esm'
+
+  - job:
+    pool: 'SmartER-dev'
+    steps:
+    # - task: DownloadPipelineArtifact@2
+    #   displayName: 'Download dacpac artifact'
+    #   inputs:
+    #     buildType: 'current'
+    #     targetPath: '$(Pipeline.Workspace)'
+
+    - task: PowerShell@2
+      inputs:
+        displayName: 'Get sqlpackage version'
+        targetType: 'inline'
+        script: |
+          sqlpackage /version    
+
+    - task: Bash@3
+      displayName: 'Deploy SQL Database'
+      inputs:
+        targetType: 'inline'
+        script: |
+          sqlpackage /Action:Publish \
+                    /SourceFile:$(Pipeline.Workspace)/pipelines/$(Build.Repository.Name).dacpac \
+                    /TargetConnectionString:"Server=tcp:esm-app-integ-client-sqldb-sqlserver-d.database.windows.net,1433;Initial Catalog=esm-app-ig-dom-contact-fr-sqldb-d;Persist Security Info=False;User ID=sql-admin;Password=aYy5Hl8bpgIfUbanWHSh6xNeTSOi0rWr;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+
+    # - task: SqlAzureDacpacDeployment@1
+    #   inputs:
+    #     azureSubscription: 'Azure_DEV'
+    #     AuthenticationType: 'connectionString'
+    #     ConnectionString: 'Server=tcp:esm-app-integ-client-sqldb-sqlserver-d.database.windows.net,1433;Initial Catalog=esm-app-ig-dom-contact-fr-sqldb-d;Persist Security Info=False;User ID=sql-admin;Password=aYy5Hl8bpgIfUbanWHSh6xNeTSOi0rWr;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+    #     deployType: 'DacpacTask'
+    #     DeploymentAction: 'Publish'
+    #     DacpacFile: '$(Pipeline.Workspace)/pipelines/$(Build.Repository.Name).dacpac'
+    #     IpDetectionMethod: 'AutoDetect'
