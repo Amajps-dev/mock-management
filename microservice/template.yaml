@@ -1,23 +1,112 @@
-stages:
-  - stage: build
-    displayName: Build
-    jobs:
-      - template: build.yaml
+parameters:
+- name: microserviceName
+  type: string
+- name: assemblyName
+  type: string
+- name: namespace
+  type: string
+  values:
+  - 'frontend'
+  - 'orchestration'
+  - 'backend'
+- name: tribe
+  type: string
+  values:
+  - 'enabler'
+  - 'client'
+  - 'user'
 
-  #################
-  # Deploy to DEV #
-  #################
-  - stage:
-    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
-    displayName: DEV
-    variables:
-      - group: Deployment-Variables-Dev
-    jobs:
-    - template: deploy.yaml
-      parameters:
-        pool: '${{ variables.PoolName }}'
-        environment: 'dev'
-        aspNetCoreEnvironment: 'Dev'
-        namespace: '${{ parameters.namespace }}'
-        azureServiceConnection: '${{ variables.AzureServiceConnection }}'
-        acrName: '${{ variables.AcrName }}'
+stages:
+- template: dotnet/templates/stages/build-dotnet.yaml@pipeline-templates
+  parameters:
+    feedID: "edenred-emea-benefits"
+    feedType: 'internal'
+    buildOrPublish: publish
+    projectFile: '**/*.csproj'
+    projectPath: '${{ parameters.assemblyName }}'
+    testProjectFile : tests/**/*Tests/*.csproj
+    sonarProjectName: '${{ parameters.microserviceName }}'
+    dotnetVersion: 6.0.201
+    artifact:
+      name: artifact
+    additionalBuildArgs: --nologo
+    buildConfiguration: Release
+    publishOutputDirectory: $(Build.ArtifactStagingDirectory)
+
+- stage: dev
+  displayName: Deploy to Dev
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  variables: 
+  - name: publicUrl
+    ${{ if eq( parameters['namespace'], 'frontend') }}:
+      value: 'dev2.smarter.edenred.io'
+    ${{ else }}:
+      value: ''
+  jobs:
+  - template: ./deploy.yaml@pipelines
+    parameters:
+      microserviceName: '${{ parameters.microserviceName }}'
+      pool: 'SmartER-dev'
+      environment: 'dev'
+      aspNetCoreEnvironment: 'Dev'
+      namespace: '${{ variables.namespace }}'
+      azureServiceConnection: 'Azure_DEV'
+      acrName: 'esmappinteg1acrd'
+      paasEnvironment: 'dev'
+      aksResourceGroup: 'smarter-app-integ-dev-rg'
+      aksName: 'esm-app-integ-1-aks-d'
+      privateUrl: 'smarter-dev2.edenred.net'
+      publicUrl: '${{ variables.publicUrl }}'
+
+- stage: uat
+  displayName: Deploy to Uat
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  variables:
+  - name: publicUrl
+    ${{ if eq( parameters['namespace'], 'frontend') }}:
+      value: 'uat.smarter.edenred.io'
+    ${{ else }}:
+      value: ''
+  jobs:
+  - template: ./deploy.yaml@pipelines
+    parameters:
+      microserviceName: '${{ parameters.microserviceName }}'
+      pool: 'SmartER-uat'
+      environment: 'uat'
+      aspNetCoreEnvironment: 'Uat'
+      namespace: '${{ parameters.namespace }}'
+      azureServiceConnection: 'Azure_UAT'
+      acrName: 'esmappinteg1acru'
+      paasEnvironment: 'UAT'
+      aksResourceGroup: 'smarter-app-integ-uat-rg'
+      aksName: 'esm-app-integ-1-aks-u'
+      privateUrl: 'smarter-uat.edenred.net'
+      publicUrl: '${{ variables.publicUrl }}'
+
+- stage: prd
+  displayName: Deploy to Prod
+  dependsOn: uat
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  variables:
+  - name: publicUrlPrd
+    ${{ if eq( parameters['namespace'], 'frontend') }}:
+      value: 'smarter.edenred.io'
+    ${{ else }}:
+      value: ''
+  jobs:
+  - deployment: 
+    environment: 'prd-${{ parameters.tribe }}'
+  - template: ./deploy.yaml@pipelines
+    parameters:
+      microserviceName: '${{ parameters.microserviceName }}'
+      pool: 'SmartER-uat'
+      environment: 'uat'
+      aspNetCoreEnvironment: 'Uat'
+      namespace: '${{ parameters.namespace }}'
+      azureServiceConnection: 'Azure_UAT'
+      acrName: 'esmappinteg1acru'
+      paasEnvironment: 'UAT'
+      aksResourceGroup: 'smarter-app-integ-uat-rg'
+      aksName: 'esm-app-integ-1-aks-u'
+      privateUrl: 'smarter.edenred.net'
+      publicUrl: '${{ variables.publicUrl }}'

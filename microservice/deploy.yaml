@@ -1,7 +1,11 @@
 parameters:
+- name: microserviceName
+  type: string
 - name: pool
   type: string
 - name: environment
+  type: string
+- name: paasEnvironment
   type: string
 - name: aspNetCoreEnvironment
   type: string
@@ -11,11 +15,17 @@ parameters:
   type: string
 - name: acrName
   type: string
+- name: aksResourceGroup
+  type: string
+- name: aksName
+  type: string
+- name: privateUrl
+  type: string
+- name: publicUrl
+  type: string
+  default: ''
 
 jobs:
-- deployment: 
-  environment: Dev
-  displayName: To remove
 - job: DockerizeMicroservice
   displayName: 'Dockerize microservice'
   timeoutInMinutes: 10
@@ -34,52 +44,49 @@ jobs:
 
   - template: steps/build/docker-build-push.yml@pipeline-templates-paas2
     parameters:
-      imageRepositoryName: $(microserviceName)
+      imageRepositoryName: '${{ parameters.microserviceName }}'
       dockerfilePath: '**/*Dockerfile'
       dockerRegistryServiceConnection: 'ContainerRegistry_MGMT'
       buildContext: '$(System.ArtifactsDirectory)'
 
 - template: jobs/deploy/request-azdo-agent.yml@pipeline-templates-paas2
   parameters:
-    azureServiceConnection: 'Azure_DEV'
-    environment: 'DEV'
+    azureServiceConnection: '${{ parameters.azureServiceConnection }}'
+    environment: '${{ parameters.paasEnvironment }}'
     entityCode: 'esm'
 
 - job: 
   displayName: Push to container registry
   dependsOn: ['RequestAzDOAgent']
-  pool: 'SmartER-dev'
-  variables:
-    azureServiceConnectionDEV: 'Azure_DEV'
-    azureServiceConnectionMgmt: 'Azure_MGMT'
-    acrNameMgmt: 'esmglobalinteg1acrm'
-    acrNameDEV: 'esmappinteg1acrd'
+  pool: '${{ parameters.pool }}'
   steps:
   - checkout: self
   
   - template: steps/deploy/docker-pull-push.yml@pipeline-templates-paas2
     parameters:
-      azureServiceConnectionSrc: '${{ variables.azureServiceConnectionMgmt }}'
-      acrNameSrc: '${{ variables.acrNameMgmt }}'
-      azureServiceConnectionDest: '${{ variables.azureServiceConnectionDEV }}'
-      acrNameDest: '${{ variables.acrNameDEV }}'
-      imageRepositoryName: $(microserviceName)
+      azureServiceConnectionSrc: 'Azure_MGMT'
+      acrNameSrc: 'esmglobalinteg1acrm'
+      azureServiceConnectionDest: '${{ parameters.azureServiceConnection }}'
+      acrNameDest: '${{ parameters.acrName }}'
+      imageRepositoryName: '${{ parameters.microserviceName }}'
 
   - powershell: |
       $content = (Get-Content $(Build.SourcesDirectory)/manifest.yaml)
-      $content = $content.replace('#{microserviceName}#', '$(microserviceName)')
+      $content = $content.replace('#{microserviceName}#', '${{ parameters.microserviceName }}')
       $content = $content.replace('#{environment}#', '${{ parameters.environment }}')
       $content = $content.replace('#{microserviceVersion}#', '$(Build.BuildNumber)')
-      $content = $content.replace('#{acrName}#', '${{ variables.acrNameDEV }}')
+      $content = $content.replace('#{acrName}#', '${{ parameters.acrName }}')
       $content = $content.replace('#{namespace}#', '${{ parameters.namespace }}')
-      $content = $content.replace('#{AspNetCoreEnvironment}#', 'Dev')
+      $content = $content.replace('#{AspNetCoreEnvironment}#', '${{ parameters.aspNetCoreEnvironment }}')
+      $content = $content.replace('#{privateUrl}#', '${{ parameters.privateUrl }}')
+      $content = $content.replace('#{publicUrl}#', '${{ parameters.publicUrl }}')
       Set-Content -Path $(Build.SourcesDirectory)/manifest.yaml -Value $content
       Get-Content $(Build.SourcesDirectory)/manifest.yaml
     displayName: Replace manifest variables
 
   - template: steps/deploy/kube-apply.yml@pipeline-templates-paas2
     parameters:
-      azureServiceConnection: ${{ variables.azureServiceConnectionDEV }}
+      azureServiceConnection: '${{ parameters.azureServiceConnection }}'
       configFile: '$(Build.SourcesDirectory)/manifest.yaml'
-      kubeRg: 'smarter-app-integ-dev-rg'
-      kubeName: 'esm-app-integ-1-aks-d'
+      kubeRg: '${{ parameters.aksResourceGroup }}'
+      kubeName: '${{ parameters.aksName }}'
