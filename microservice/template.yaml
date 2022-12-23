@@ -49,7 +49,7 @@ stages:
       pool: 'SmartER-dev'
       environment: 'dev'
       aspNetCoreEnvironment: 'Dev'
-      namespace: '${{ variables.namespace }}'
+      namespace: '${{ parameters.namespace }}'
       azureServiceConnection: 'Azure_DEV'
       acrName: 'esmappinteg1acrd'
       paasEnvironment: 'dev'
