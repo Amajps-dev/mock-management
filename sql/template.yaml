@@ -1,0 +1,49 @@
+parameters:
+- name: connectionStringNameDev
+  type: string
+- name: connectionStringNameUat
+  type: string
+- name: connectionStringNameProd
+  type: string
+      
+stages:
+- stage: build
+  displayName: Build
+  jobs:
+  - template: ./build.yaml@pipelines
+
+- stage: deployDev
+  displayName: 'Deploy to Dev'
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  jobs:
+  - template: ./deploy.yaml@pipelines
+    parameters:
+      connectionStringName: '${{ parameters.connectionStringNameDev }}'
+      azureServiceConnection: 'Azure_DEV'
+      paasEnvironment: 'DEV'
+      pool: 'SmartER-dev'
+      keyVaultName: 'esm-app-integ-1-kv-d'
+
+- stage: deployUat
+  displayName: 'Deploy to Uat'
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  jobs:
+  - template: ./deploy.yaml@pipelines
+    parameters:
+      connectionStringName: '${{ parameters.connectionStringNameUat }}'
+      azureServiceConnection: 'Azure_UAT'
+      paasEnvironment: 'UAT'
+      pool: 'SmartER-uat'
+      keyVaultName: 'esm-app-integ-1-kv-u'
+
+- stage: deployProd
+  displayName: 'Deploy to Prod'
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  jobs:
+  - template: ./deploy.yaml@pipelines
+    parameters:
+      connectionStringName: '${{ parameters.connectionStringNameProd }}'
+      azureServiceConnection: 'Azure_PROD'
+      paasEnvironment: 'PROD'
+      pool: 'SmartER-prd'
+      keyVaultName: 'esm-app-integ-1-kv-p'
