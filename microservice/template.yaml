@@ -103,7 +103,7 @@ stages:
       environment: 'prod'
       aspNetCoreEnvironment: 'Production'
       namespace: '${{ parameters.namespace }}'
-      azureServiceConnection: 'Azure_PRD'
+      azureServiceConnection: 'Azure_PROD'
       acrName: 'esmappinteg1acru'
       paasEnvironment: 'PRD'
       aksResourceGroup: 'smarter-app-integ-prd-rg'
