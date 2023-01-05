@@ -105,7 +105,7 @@ stages:
       namespace: '${{ parameters.namespace }}'
       azureServiceConnection: 'Azure_PROD'
       acrName: 'esmappinteg1acru'
-      paasEnvironment: 'PRD'
+      paasEnvironment: 'PROD'
       aksResourceGroup: 'smarter-app-integ-prd-rg'
       aksName: 'esm-app-integ-1-aks-p'
       privateUrl: 'smarter.edenred.net'
