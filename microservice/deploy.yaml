@@ -24,12 +24,21 @@ parameters:
 - name: publicUrl
   type: string
   default: ''
+- name: artifactName
+  type: string
+  default: artifact
+- name: dependsOn
+  type: string
+  default: ''
+
 
 jobs:
 - job: DockerizeMicroservice
   displayName: 'Dockerize microservice'
+  ${{ if parameters.DependsOn }}:
+    dependsOn: '${{ parameters.dependsOn }}'
   timeoutInMinutes: 10
-  pool: 
+  pool:
     vmImage: 'ubuntu-latest'
   steps:
   - checkout: self
@@ -39,7 +48,7 @@ jobs:
     inputs:
       buildType: 'current'
       downloadType: 'single'
-      artifactName: artifact
+      artifactName: '${{ parameters.artifactName }}'
       downloadPath: '$(System.ArtifactsDirectory)'
 
   - template: steps/build/docker-build-push.yml@pipeline-templates-paas2
@@ -55,13 +64,13 @@ jobs:
     environment: '${{ parameters.paasEnvironment }}'
     entityCode: 'esm'
 
-- job: 
+- job:
   displayName: Push to container registry
   dependsOn: ['RequestAzDOAgent']
   pool: '${{ parameters.pool }}'
   steps:
   - checkout: self
-  
+
   - template: steps/deploy/docker-pull-push.yml@pipeline-templates-paas2
     parameters:
       azureServiceConnectionSrc: 'Azure_MGMT'
