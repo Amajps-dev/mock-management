@@ -46,6 +46,8 @@ stages:
     ${{ else }}:
       value: ''
   jobs:
+  - deployment: 
+    environment: 'dev-${{ parameters.tribe }}'
   - template: ./deploy.yaml@pipelines
     parameters:
       microserviceName: '${{ parameters.microserviceName }}'
@@ -87,6 +89,8 @@ stages:
     ${{ else }}:
       value: ''
   jobs:
+  - deployment: 
+    environment: 'uat-${{ parameters.tribe }}'
   - template: ./deploy.yaml@pipelines
     parameters:
       microserviceName: '${{ parameters.microserviceName }}'
