@@ -15,6 +15,9 @@ parameters:
   - 'enabler'
   - 'client'
   - 'user'
+- name: jiraTestsId
+  type: string
+  default: ''
 
 stages:
 - template: dotnet/templates/stages/build-dotnet.yaml@pipeline-templates
@@ -57,6 +60,22 @@ stages:
       aksName: 'esm-app-integ-1-aks-d'
       privateUrl: 'smarter-dev2.edenred.net'
       publicUrl: '${{ variables.publicUrl }}'
+  - job: automatedtests
+    displayName: Run automated tests
+    dependsOn: deploy
+    condition: and(succeeded(), ne('${{ parameters.jiraTestsId }}', ''))
+    steps:
+    - checkout: pipelines
+    - task: PowerShell@2
+      displayName: 'Run Test - ${{ parameters.jiraTestsId }}'
+      inputs:
+        pwsh: true
+        targetType: 'filePath'
+        filePath: './invoke-pipeline.ps1'
+        arguments: >
+          -testplan '${{ parameters.jiraTestsId }}'
+          -pat '$(System.AccessToken)'
+          -environment 'development'
 
 - stage: uat
   displayName: Deploy to Uat

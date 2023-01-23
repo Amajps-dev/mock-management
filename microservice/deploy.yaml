@@ -64,7 +64,7 @@ jobs:
     environment: '${{ parameters.paasEnvironment }}'
     entityCode: 'esm'
 
-- job:
+- job: deploy
   displayName: Push to container registry
   dependsOn: ['RequestAzDOAgent']
   pool: '${{ parameters.pool }}'
