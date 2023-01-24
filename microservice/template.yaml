@@ -81,7 +81,8 @@ stages:
 
 - stage: uat
   displayName: Deploy to Uat
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/releases/'))
+  dependsOn: ["Build_UnitTest"]
   variables:
   - name: publicUrl
     ${{ if eq( parameters['namespace'], 'frontend') }}:
