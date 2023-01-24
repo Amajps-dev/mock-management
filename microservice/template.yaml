@@ -38,7 +38,7 @@ stages:
 
 - stage: dev
   displayName: Deploy to Dev
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  condition: or(and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main')), and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/features/')))
   variables: 
   - name: publicUrl
     ${{ if eq( parameters['namespace'], 'frontend') }}:
