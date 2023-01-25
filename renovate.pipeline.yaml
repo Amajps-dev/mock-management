@@ -1,0 +1,93 @@
+schedules:
+  - cron: '0 0 * * *'
+    displayName: 'Every day at midnight'
+    branches:
+      include: [main]
+    always: false
+
+trigger: none
+
+variables:
+- group: Tools
+
+steps:
+- pwsh: |
+    $pat = "$(System.AccessToken)"
+    $base64AuthInfo= [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$pat"))
+    $projectUrl = "https://dev.azure.com/edenred-emea-benefits/SmartER/_apis/git/repositories?api-version=6.1-preview.1" 
+    $repos = (Invoke-RestMethod -Uri $projectUrl -Method Get -UseDefaultCredential -Headers @{Authorization=("Basic {0}" -f $base64AuthInfo)}).Value
+    $repos = $repos | Where-Object {$($_.name).StartsWith('xp') -or $($_.name).StartsWith('orch') -or $($_.name).StartsWith('dom')}  | Select-Object -Property name | Join-String -Property {"SmartER/$($_.name)"} -SingleQuote -Separator ', '
+    Add-Content "$(System.DefaultWorkingDirectory)/renovate-config.js" -Value @"
+    module.exports = {
+      platform: 'azure',
+      endpoint: '$(System.CollectionUri)',
+      token: $Env:TOKEN,
+      onboarding: false,
+      requireConfig: 'optional',
+      semanticCommits: 'disabled',
+      commitMessagePrefix: 'chore(deps): ',
+      commitMessageAction: 'bump',
+      commitMessageTopic: '{{depName}}',
+      automerge: false,
+      automergeStrategy: 'squash',
+      platformAutomerge: false,
+      hostRules: [
+        {
+          hostType: 'nuget',
+          matchHost: 'pkgs.dev.azure.com',
+          username: '',
+          password: $Env:TOKEN,
+        }
+      ],
+      repositories: "[$repos]",
+      groupName: 'Other dependencies',
+      separateMajorMinor: false,
+      packageRules: [
+        {
+          groupName: 'Microsoft',
+          matchPackagePatterns: ['Microsoft', 'dotnet-sdk', 'mcr.microsoft.com/dotnet/aspnet'],
+          matchUpdateTypes: ["minor", "patch"],
+          recreateClosed: true
+        },
+        {
+          groupName: 'Microsoft Major',
+          matchPackagePatterns: ['Microsoft', 'dotnet-sdk', 'mcr.microsoft.com/dotnet/aspnet'],
+          matchUpdateTypes: ["major"],
+          enabled: false
+        },
+        {
+          groupName: 'Tests',
+          matchPackagePatterns: ['FluentAssertions', 'Moq', 'xunit', 'coverlet', 'NET.Test.Sdk'],
+          recreateClosed: true
+        },
+        {
+          groupName: 'SmartER',
+          matchPackagePatterns: ['Smarter'],
+          matchUpdateTypes: ["minor", "patch"],
+          recreateClosed: true
+        },
+        {
+          groupName: 'MediatR',
+          matchPackagePatterns: ['MediatR'],
+          recreateClosed: true,
+          enabled: false
+        },
+        {
+          groupName: 'AutoMapper',
+          matchPackagePatterns: ['AutoMapper'],
+          recreateClosed: true
+        }
+      ]
+    };
+    "@
+
+    Get-Content "$(System.DefaultWorkingDirectory)/renovate-config.js"
+
+    git config --global user.email 'bot@renovateapp.com'
+    git config --global user.name 'Renovate Bot'
+    npx renovate
+  displayName: 'Update dependencies using Renovate'
+  env:
+    TOKEN: $(System.AccessToken)
+    GITHUB_COM_TOKEN: $(Renovate.GitHub.PAT)
+    RENOVATE_CONFIG_FILE: $(System.DefaultWorkingDirectory)/renovate-config.js
