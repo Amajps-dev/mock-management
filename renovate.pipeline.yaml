@@ -21,7 +21,7 @@ steps:
     module.exports = {
       platform: 'azure',
       endpoint: '$(System.CollectionUri)',
-      token: $Env:TOKEN,
+      token: '$Env:TOKEN',
       onboarding: false,
       requireConfig: 'optional',
       semanticCommits: 'disabled',
@@ -36,10 +36,10 @@ steps:
           hostType: 'nuget',
           matchHost: 'pkgs.dev.azure.com',
           username: '',
-          password: $Env:TOKEN,
+          password: '$Env:TOKEN',
         }
       ],
-      repositories: "[$repos]",
+      repositories: [$repos],
       groupName: 'Other dependencies',
       separateMajorMinor: false,
       packageRules: [
