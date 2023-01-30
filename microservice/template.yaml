@@ -114,7 +114,7 @@ stages:
   variables:
   - name: publicUrl
     ${{ if eq( parameters['namespace'], 'frontend') }}:
-      value: 'smarter.edenred.io'
+      value: 'prd.smarter.edenred.io'
     ${{ else }}:
       value: ''
   jobs:
