@@ -12,4 +12,4 @@ resources:
       name: 'smarter/pipelines'
 
 stages:
-- template: src/nuget/template-nuget.yml@templates
+- template: src/nuget/template-nuget.yaml@templates
