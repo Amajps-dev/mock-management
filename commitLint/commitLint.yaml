@@ -35,7 +35,7 @@ jobs:
   - pwsh: |
       Write-Host "Check title: '$($ENV:Title)'"
 
-      try { &commitlint --version } catch { npm install commitlint -g }
+      try { &commitlint --version } catch { npm install -g }
 
       $result = $($ENV:Title | commitlint)
       if ($LASTEXITCODE -eq 1) {
@@ -46,20 +46,14 @@ jobs:
             Write-Host "##[info]$_"
           }
         }
-        # Write-Host "##vso[task.logissue type=error]Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
+        Write-Host "##vso[task.logissue type=error]Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
 
         exit 1
       } else {
         Write-Host "✅ Pull request Title looks good. Nice work! 👍"
       }
-    displayName: 'Check pull request title and commit message'
-    failOnStderr: true
-    ignoreLASTEXITCODE: true
-    workingDirectory: 'commitLint'
-    env:
-      Title: $(PullRequest.Title)
 
-  - pwsh: |
+
       Write-Host "Check commit message: '$($ENV:CommitMessage)'"
 
       if("$($ENV:CommitMessage)" -match "^Merged PR [0-9]+: "){
@@ -86,9 +80,10 @@ jobs:
       } else {
         Write-Host "✅ Pull request commit message looks good. Nice work! 👍"
       }
-    displayName: 'Check pull request commit message'
+    displayName: 'Check pull request title and commit message'
     failOnStderr: true
     ignoreLASTEXITCODE: true
     workingDirectory: 'commitLint'
     env:
+      Title: $(PullRequest.Title)
       CommitMessage: $(PullRequest.CommitMessage)
