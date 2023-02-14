@@ -10,7 +10,7 @@ steps:
   displayName: Install NPM packages
   inputs:
     command: 'install'
-    workingDir: 'version'
+    workingDir: './Pipelines/version'
     
 - task: Npm@1
   displayName: Bump version & Create release doc (semantic-release)
@@ -22,4 +22,4 @@ steps:
     command: custom
     verbose: false
     customCommand: run ci:release
-    workingDir: 'version'
+    workingDir: './Pipelines/version'

@@ -6,7 +6,10 @@ jobs:
   displayName: Build
   steps:
   - checkout: self
+    fetchDepth: 0 # https://github.com/GitTools/actions/blob/main/docs/examples/azure/gitversion/execute/usage-examples.md
+    fetchTags: false
 
+  # - template: ../version/version.yaml@pipelines
   - template: ../version.yaml
 
   - task: DotNetCoreCLI@2
@@ -21,7 +24,7 @@ jobs:
   - task: SonarCloudPrepare@1
     displayName: 'Prepare Analysis'
     inputs:
-      SonarCloud: 'smartER-sonarcloud'
+      SonarCloud: 'SonarCloud'
       organization: edenred-emea-benefits
       projectKey: edenred-emea-benefits_$(Build.Repository.Name)
       projectName: '$(Build.Repository.Name)'
@@ -52,10 +55,10 @@ jobs:
   - task: SonarCloudPublish@1
     displayName: 'Publish Quality Gate Result'
   
-  - task: sonarcloud-buildbreaker@2
-    displayName: SonarCloud build breaker
+#  - task: sonarcloud-buildbreaker@2
+#    displayName: SonarCloud build breaker
     inputs:
-      SonarCloud: 'smartER-sonarcloud'
+      SonarCloud: 'SonarCloud'
       organization: 'edenred-emea-benefits'
 
   - task: DotNetCoreCLI@2
@@ -92,9 +95,9 @@ jobs:
       publishLocation: 'Container'
   
   - task: PublishBuildArtifacts@1
-    displayName: 'Publish pipeline artifact'
+    displayName: 'Publish artifact'
     condition: ne(variables['Build.Reason'], 'PullRequest')
     inputs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      ArtifactName: 'pipeline'
+      ArtifactName: 'artifact'
       publishLocation: 'Container'

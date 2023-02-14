@@ -20,21 +20,10 @@ parameters:
   default: ''
 
 stages:
-- template: dotnet/templates/stages/build-dotnet.yaml@pipeline-templates
-  parameters:
-    feedID: "edenred-emea-benefits"
-    feedType: 'internal'
-    buildOrPublish: publish
-    projectFile: '**/*.csproj'
-    projectPath: '${{ parameters.assemblyName }}'
-    testProjectFile : tests/**/*Tests/*.csproj
-    sonarProjectName: '${{ parameters.microserviceName }}'
-    dotnetVersion: 6.0.201
-    artifact:
-      name: artifact
-    additionalBuildArgs: --nologo
-    buildConfiguration: Release
-    publishOutputDirectory: $(Build.ArtifactStagingDirectory)
+- stage: build
+  displayName: Build
+  jobs:
+  - template: ./build.yaml@pipelines
 
 - stage: dev
   displayName: Deploy to Dev
@@ -62,6 +51,7 @@ stages:
       aksName: 'esm-app-integ-1-aks-d'
       privateUrl: 'smarter-dev2.edenred.net'
       publicUrl: '${{ variables.publicUrl }}'
+      artifactName: '$(Build.Repository.Name)'
   - job: automatedtests
     displayName: Run automated tests
     dependsOn: deploy
@@ -106,6 +96,7 @@ stages:
       aksName: 'esm-app-integ-1-aks-u'
       privateUrl: 'smarter-uat.edenred.net'
       publicUrl: '${{ variables.publicUrl }}'
+      artifactName: '$(Build.Repository.Name)'
 
 - stage: prd
   displayName: Deploy to Prod
@@ -134,3 +125,4 @@ stages:
       aksName: 'esm-app-integ-1-aks-p'
       privateUrl: 'smarter.edenred.net'
       publicUrl: '${{ variables.publicUrl }}'
+      artifactName: '$(Build.Repository.Name)'

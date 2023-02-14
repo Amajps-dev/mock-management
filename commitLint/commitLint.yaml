@@ -1,8 +1,25 @@
 jobs:
-- job: lintPR
+- job: lintPullRequest
   displayName: Lint PullRequest
   steps: 
   - checkout: pipelines
+  
+  - pwsh: |
+      $baseUri = "https://dev.azure.com/edenred-emea-benefits/567b979f-3c97-4699-9c05-c387fe6bd586/"
+      $base64AuthInfo = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$ENV:SYSTEM_ACCESSTOKEN"))
+      $headers = @{ Authorization = "Basic $base64AuthInfo" }
+      $uri = "$(System.CollectionUri)_apis/git/repositories/$(Build.Repository.ID)/pullRequests/$(System.PullRequest.PullRequestId)?api-version=7.0"
+      $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json" -Headers $headers
+
+      Write-Host "Title: '$($result.title)'"
+      Write-Host "Commit message: '$($result.completionOptions.mergeCommitMessage)'"
+      
+      Write-Host "##vso[task.setvariable variable=PullRequest.Title]$($result.title)"
+      Write-Host "##vso[task.setvariable variable=PullRequest.CommitMessage]$($result.completionOptions.mergeCommitMessage)"
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    displayName: Get PullRequest information
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
 
   - task: NodeTool@0
     displayName: Use node v16
@@ -14,21 +31,13 @@ jobs:
     inputs:
       command: 'install'
       workingDir: 'commitLint'
-  
-  - bash: |
-      PR_TITLE="$(curl --silent -u azdo:$SYSTEM_ACCESSTOKEN \
-      $(System.CollectionUri)_apis/git/repositories/$(Build.Repository.ID)/pullRequests/$(System.PullRequest.PullRequestId)?api-version=5.1 \
-      | jq -r .title)"
-      echo "##vso[task.setvariable variable=Pr.Title]$PR_TITLE"          
-    env:
-      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-    displayName: Get PullRequest title
-    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
 
   - pwsh: |
+      Write-Host "Check title: '$($ENV:Title)'"
+
       try { &commitlint --version } catch { npm install commitlint -g }
 
-      $result = $($ENV:PR_TITLE | commitlint)
+      $result = $($ENV:Title | commitlint)
       if ($LASTEXITCODE -eq 1) {
         $result | Select-Object -Skip 1 |  ForEach-Object {
           if ($_ -match '✖') {
@@ -37,13 +46,49 @@ jobs:
             Write-Host "##[info]$_"
           }
         }
-        # Write-Host "##vso[task.logissue type=error] Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
+        # Write-Host "##vso[task.logissue type=error]Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
 
         exit 1
       } else {
-        Write-Host "✅ PR Title looks good. Nice work! 👍"
+        Write-Host "✅ Pull request Title looks good. Nice work! 👍"
       }
-    displayName: Check conventional commit PullRequest title
+    displayName: 'Check pull request title and commit message'
     failOnStderr: true
     ignoreLASTEXITCODE: true
     workingDirectory: 'commitLint'
+    env:
+      Title: $(PullRequest.Title)
+
+  - pwsh: |
+      Write-Host "Check commit message: '$($ENV:CommitMessage)'"
+
+      if("$($ENV:CommitMessage)" -match "^Merged PR [0-9]+: "){
+        Write-Host "##vso[task.logissue type=error]✖ Commit message not compliant"
+        Write-Host "##vso[task.logissue type=error]How to update title and commit message: https://smarter-edenred.atlassian.net/wiki/spaces/TE/pages/5192351803/Conventional+Commits#Pull-request"
+        Write-Host "##vso[task.logissue type=error]Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
+        exit 1
+      }
+
+      try { &commitlint --version } catch { npm install commitlint -g }
+
+      $result = $($ENV:CommitMessage | commitlint)
+      if ($LASTEXITCODE -eq 1) {
+        $result | Select-Object -Skip 1 |  ForEach-Object {
+          if ($_ -match '✖') {
+            Write-Host "##vso[task.logissue type=error]$_"
+          } else {
+            Write-Host "##[info]$_"
+          }
+        }
+        # Write-Host "##vso[task.logissue type=error]Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
+
+        exit 1
+      } else {
+        Write-Host "✅ Pull request commit message looks good. Nice work! 👍"
+      }
+    displayName: 'Check pull request commit message'
+    failOnStderr: true
+    ignoreLASTEXITCODE: true
+    workingDirectory: 'commitLint'
+    env:
+      CommitMessage: $(PullRequest.CommitMessage)

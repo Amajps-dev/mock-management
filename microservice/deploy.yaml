@@ -24,18 +24,17 @@ parameters:
 - name: publicUrl
   type: string
   default: ''
-- name: artifactName
-  type: string
-  default: artifact
 - name: dependsOn
   type: string
   default: ''
-
+- name: artifactName
+  type: string
+  default: artifact
 
 jobs:
 - job: DockerizeMicroservice
   displayName: 'Dockerize microservice'
-  ${{ if parameters.DependsOn }}:
+  ${{ if parameters.dependsOn }}:
     dependsOn: '${{ parameters.dependsOn }}'
   timeoutInMinutes: 10
   pool:
@@ -56,7 +55,7 @@ jobs:
       imageRepositoryName: '${{ parameters.microserviceName }}'
       dockerfilePath: '**/*Dockerfile'
       dockerRegistryServiceConnection: 'ContainerRegistry_MGMT'
-      buildContext: '$(System.ArtifactsDirectory)'
+      buildContext: '$(System.ArtifactsDirectory)/${{ parameters.artifactName }}'
 
 - template: jobs/deploy/request-azdo-agent.yml@pipeline-templates-paas2
   parameters:
