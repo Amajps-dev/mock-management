@@ -8,7 +8,7 @@ module.exports = {
       'always',
       (parsed) => {
         const jiraTypes = ['fix','feat'];
-        const basicRegexp = '^[a-z]';
+        const basicRegexp = '^(([A-Z]+-[0-9]+ )?[a-z])';
         const jiraRegexp = '^([A-Z]+-[0-9]+ [a-z]|[a-z].+#[A-Z]+-[0-9]+$)';
 
         return parsed.subject?.match(jiraTypes.includes(parsed.type) ? jiraRegexp : basicRegexp)
