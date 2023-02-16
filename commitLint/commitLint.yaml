@@ -21,11 +21,6 @@ jobs:
     displayName: Get PullRequest information
     condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
 
-  - task: NodeTool@0
-    displayName: Use node v16
-    inputs:
-      versionSpec: '16.x'
-      
   - task: Npm@1
     displayName: Install NPM packages
     inputs:
@@ -35,9 +30,7 @@ jobs:
   - pwsh: |
       Write-Host "Check title: '$($ENV:Title)'"
 
-      try { &commitlint --version } catch { npm install -g }
-
-      $result = $($ENV:Title | commitlint)
+      $result = $($ENV:Title | ./node_modules/.bin/commitlint )
       if ($LASTEXITCODE -eq 1) {
         $result | Select-Object -Skip 1 |  ForEach-Object {
           if ($_ -match '✖') {
@@ -46,7 +39,7 @@ jobs:
             Write-Host "##[info]$_"
           }
         }
-        Write-Host "##vso[task.logissue type=error]Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
+        Write-Host "##vso[task.logissue type=error]➡ Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
 
         exit 1
       } else {
@@ -56,16 +49,19 @@ jobs:
 
       Write-Host "Check commit message: '$($ENV:CommitMessage)'"
 
+      if("$($ENV:CommitMessage)" -eq ""){
+           Write-Host "##vso[task.logissue type=error]✖ Empty commit message"
+           Write-Host "##vso[task.logissue type=error]➡ How to update title and commit message: https://smarter-edenred.atlassian.net/wiki/spaces/TE/pages/5192351803/Conventional+Commits#Pull-request"
+      }
+
       if("$($ENV:CommitMessage)" -match "^Merged PR [0-9]+: "){
-        Write-Host "##vso[task.logissue type=error]✖ Commit message not compliant"
-        Write-Host "##vso[task.logissue type=error]How to update title and commit message: https://smarter-edenred.atlassian.net/wiki/spaces/TE/pages/5192351803/Conventional+Commits#Pull-request"
-        Write-Host "##vso[task.logissue type=error]Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
+        Write-Host "##vso[task.logissue type=error]✖ Remove AzureDevops commit message prefix"
+        Write-Host "##vso[task.logissue type=error]➡ How to update title and commit message: https://smarter-edenred.atlassian.net/wiki/spaces/TE/pages/5192351803/Conventional+Commits#Pull-request"
+        Write-Host "##vso[task.logissue type=error]➡ Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
         exit 1
       }
 
-      try { &commitlint --version } catch { npm install commitlint -g }
-
-      $result = $($ENV:CommitMessage | commitlint)
+      $result = $($ENV:CommitMessage | ./node_modules/.bin/commitlint)
       if ($LASTEXITCODE -eq 1) {
         $result | Select-Object -Skip 1 |  ForEach-Object {
           if ($_ -match '✖') {
@@ -74,7 +70,7 @@ jobs:
             Write-Host "##[info]$_"
           }
         }
-        # Write-Host "##vso[task.logissue type=error]Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
+        Write-Host "##vso[task.logissue type=error]➡ Rules list: https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-conventional"
 
         exit 1
       } else {
