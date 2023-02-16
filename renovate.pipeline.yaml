@@ -83,7 +83,7 @@ steps:
 
     Get-Content "$(System.DefaultWorkingDirectory)/renovate-config.js"
 
-    git config --global user.email 'bot@renovateapp.com'
+    git config --global user.email 'renovate-bot@edenred.com'
     git config --global user.name 'Renovate Bot'
     npx renovate
   displayName: 'Update dependencies using Renovate'
