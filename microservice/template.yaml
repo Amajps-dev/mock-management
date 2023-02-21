@@ -18,7 +18,7 @@ parameters:
 - name: jiraTestsId
   type: string
   default: ''
-
+  
 stages:
 - stage: build
   displayName: Build
@@ -29,6 +29,7 @@ stages:
   displayName: Deploy to Dev
   condition: or(and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main')), and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/feat')))
   variables: 
+  - group: Tools
   - name: publicUrl
     ${{ if eq( parameters['namespace'], 'frontend') }}:
       value: 'dev2.smarter.edenred.io'
@@ -74,6 +75,7 @@ stages:
   condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
   dependsOn: ["build"]
   variables:
+  - group: Tools
   - name: publicUrl
     ${{ if eq( parameters['namespace'], 'frontend') }}:
       value: 'uat.smarter.edenred.io'
@@ -103,6 +105,7 @@ stages:
   dependsOn: uat
   condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   variables:
+  - group: Tools
   - name: publicUrl
     ${{ if eq( parameters['namespace'], 'frontend') }}:
       value: 'prd.smarter.edenred.io'
