@@ -142,7 +142,7 @@ try
   }
   else 
   {
-    Write-Host "##vso[task.complete result=SucceededWithIssues;]No deployment information to push to Jira."
+    Write-Host "##vso[task.complete result=SucceededWithIssues;]No issue found to push to Jira."
   }
 }
 catch 
