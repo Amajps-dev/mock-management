@@ -138,13 +138,13 @@ try
       Write-Host "##vso[task.logissue type=error]]Push deployment information to Jira succeeded with issues: $($pushDeploymentResult.unknownAssociations)."
     }
   }
-  catch 
+  else 
   {
-    Write-Host "An error occurred:"
-    Write-Host $_
+    Write-Host "##vso[task.complete result=SucceededWithIssues;]No deployment information to push to Jira."
   }
 }
-else 
+catch 
 {
-  Write-Host "##vso[task.complete result=SucceededWithIssues;]No deployment information to push to Jira."
+  Write-Host "An error occurred:"
+  Write-Host $_
 }
