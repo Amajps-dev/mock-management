@@ -59,6 +59,8 @@ try
   $getBuildChangeResult = Invoke-WebRequest -URI "$azureDevOpsBaseUrl/_apis/build/builds/$buildId/changes?top=30api-version=7.0" -Method Get -ContentType "application/json" -Headers $headers
   $changes = ($getBuildChangeResult.content | ConvertFrom-Json).value
 
+  Write-Host "Got $($changes.count) issues."
+
   if ($changes.count -ne 0)
   {
     $issues = $changes | Select-Object -Property message | Select-String "(lot|ltt|lct|lut|ldt)-([0-9]+)" -AllMatches 
