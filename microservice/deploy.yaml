@@ -32,24 +32,24 @@ parameters:
   default: artifact
 
 jobs:
-# - job: inProgressJiraDeployment
-#   displayName: Set deployment in progress in Jira
-#   steps:
-#   - checkout: pipelines
-#   - task: PowerShell@2
-#     inputs:
-#       pwsh: true
-#       targetType: 'filePath'
-#       filePath: './jira-deployment/push-deployment-to-jira.ps1'
-#       arguments: >
-#         -pat '$(System.AccessToken)'
-#         -jiraApiClientSecret '$(Jira.Api.ClientSecret)'
-#         -environment '${{ parameters.environment }}'
-#         -state 'InProgress'
-#         -buildId '$(Build.BuildId)'
-#         -buildNumber '$(Build.BuildNumber)'
-#         -buildDefinitionId '$(System.DefinitionId)'
-#         -repositoryName '$(Build.Repository.Name)'
+- job: inProgressJiraDeployment
+  displayName: Set deployment in progress in Jira
+  steps:
+  - checkout: pipelines
+  - task: PowerShell@2
+    inputs:
+      pwsh: true
+      targetType: 'filePath'
+      filePath: './jira-deployment/push-deployment-to-jira.ps1'
+      arguments: >
+        -pat '$(System.AccessToken)'
+        -jiraApiClientSecret '$(Jira.Api.ClientSecret)'
+        -environment '${{ parameters.environment }}'
+        -state 'InProgress'
+        -buildId '$(Build.BuildId)'
+        -buildNumber '$(Build.BuildNumber)'
+        -buildDefinitionId '$(System.DefinitionId)'
+        -repositoryName '$(Build.Repository.Name)'
 
 - job: DockerizeMicroservice
   displayName: 'Dockerize microservice'
@@ -118,6 +118,6 @@ jobs:
       kubeRg: '${{ parameters.aksResourceGroup }}'
       kubeName: '${{ parameters.aksName }}'
 
-# - template: ../jira-deployment/jira-deployment.yaml@pipelines
-#   parameters:
-#     environment: '${{ parameters.environment }}'
+- template: ../jira-deployment/jira-deployment.yaml@pipelines
+  parameters:
+    environment: '${{ parameters.environment }}'
