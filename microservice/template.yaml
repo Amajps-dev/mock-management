@@ -34,7 +34,7 @@ stages:
     ${{ if eq( parameters['namespace'], 'frontend') }}:
       value: 'dev2.smarter.edenred.io'
     ${{ else }}:
-      value: ''
+      value: 'error'
   jobs:
   - deployment: 
     environment: 'dev-${{ parameters.tribe }}'
@@ -80,7 +80,7 @@ stages:
     ${{ if eq( parameters['namespace'], 'frontend') }}:
       value: 'uat.smarter.edenred.io'
     ${{ else }}:
-      value: ''
+      value: 'error'
   jobs:
   - deployment: 
     environment: 'uat-${{ parameters.tribe }}'
@@ -110,7 +110,7 @@ stages:
     ${{ if eq( parameters['namespace'], 'frontend') }}:
       value: 'prd.smarter.edenred.io'
     ${{ else }}:
-      value: ''
+      value: 'error'
   jobs:
   - deployment: 
     environment: 'prd-${{ parameters.tribe }}'
