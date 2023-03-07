@@ -3,6 +3,8 @@ parameters:
   type: string
 - name: azureServiceConnection
   type: string
+- name: environment
+  type: string
 - name: paasEnvironment
   type: string
 - name: pool
@@ -43,4 +45,7 @@ jobs:
         dotnet new tool-manifest
         dotnet tool install microsoft.sqlpackage
         dotnet tool run sqlpackage /Action:Publish /SourceFile:$(System.ArtifactsDirectory)/$(Build.Repository.Name)/$(Build.Repository.Name).dacpac `
-        /TargetConnectionString:"$(${{ parameters.connectionStringName }})"
+        /TargetConnectionString:"$(${{ parameters.connectionStringName }})`
+        /v:env="$Env:environment"
+      env:
+        environment: ${{ parameters.environment }}
