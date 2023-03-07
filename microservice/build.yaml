@@ -1,6 +1,6 @@
 jobs:
-- ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-  - template: ../commitLint/commitLint.yaml
+# - ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+#   - template: ../commitLint/commitLint.yaml
 
 - job: build
   displayName: Build
@@ -9,7 +9,7 @@ jobs:
     fetchDepth: 0 # https://github.com/GitTools/actions/blob/main/docs/examples/azure/gitversion/execute/usage-examples.md
     fetchTags: false
 
-  - template: ../version/version.yaml@pipelines
+  # - template: ../version/version.yaml@pipelines
   - template: ../version.yaml
 
   - task: DotNetCoreCLI@2

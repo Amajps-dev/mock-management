@@ -9,6 +9,8 @@ steps:
   inputs: 
     useConfigFile: True 
     configFilePath: "gitversion.yml"
+    # configFilePath: "./$(Build.Repository.Name)/gitversion.yml"
+    # targetPath: './'
 
 - task: PowerShell@2
   displayName: Update version
