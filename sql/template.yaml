@@ -20,6 +20,7 @@ stages:
     parameters:
       connectionStringName: '${{ parameters.connectionStringNameDev }}'
       azureServiceConnection: 'Azure_DEV'
+      environment: 'dev'
       paasEnvironment: 'DEV'
       pool: 'SmartER-dev'
       keyVaultName: 'esm-app-integ-1-kv-d'
@@ -32,6 +33,7 @@ stages:
     parameters:
       connectionStringName: '${{ parameters.connectionStringNameUat }}'
       azureServiceConnection: 'Azure_UAT'
+      environment: 'uat'
       paasEnvironment: 'UAT'
       pool: 'SmartER-uat'
       keyVaultName: 'esm-app-integ-1-kv-u'
@@ -44,6 +46,7 @@ stages:
     parameters:
       connectionStringName: '${{ parameters.connectionStringNameProd }}'
       azureServiceConnection: 'Azure_PROD'
+      environment: 'prod'
       paasEnvironment: 'PROD'
       pool: 'SmartER-prd'
       keyVaultName: 'esm-app-integ-1-kv-p'
