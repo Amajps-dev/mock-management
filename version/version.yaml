@@ -1,5 +1,5 @@
 steps: 
-- checkout: pipelines
+# - checkout: pipelines
 
 - task: NodeTool@0
   displayName: Use node v16
@@ -10,7 +10,8 @@ steps:
   displayName: Install NPM packages
   inputs:
     command: 'install'
-    workingDir: './Pipelines/version'
+    # workingDir: './Pipelines/version'
+    workingDir: './version'
     
 - task: Npm@1
   displayName: Bump version & Create release doc (semantic-release)
