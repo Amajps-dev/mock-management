@@ -5,8 +5,8 @@
       displayName: Build dacpac
       inputs:
         command: 'build'
-        projects: '**/*.csproj'
-        arguments: '/p:OutDir=$(Build.BinariesDirectory) /p:AssemblyName=$(Build.Repository.Name)'
+        projects: '**/*.sqlproj'
+        arguments: '/p:OutDir=$(Build.BinariesDirectory) /p:AssemblyName=$(Build.Repository.Name) /p:SqlTargetName=$(Build.Repository.Name)'
     
     - task: PublishBuildArtifacts@1
       displayName: 'Publish dacpac artifact'

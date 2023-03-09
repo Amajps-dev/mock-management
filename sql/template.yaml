@@ -5,6 +5,12 @@ parameters:
   type: string
 - name: connectionStringNameProd
   type: string
+- name: tribe
+  type: string
+  values:
+  - 'enabler'
+  - 'client'
+  - 'user'
       
 stages:
 - stage: build
@@ -27,8 +33,11 @@ stages:
 
 - stage: deployUat
   displayName: 'Deploy to Uat'
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+  dependsOn: ["build"]
   jobs:
+  - deployment: 
+    environment: 'uat-${{ parameters.tribe }}'
   - template: ./deploy.yaml@pipelines
     parameters:
       connectionStringName: '${{ parameters.connectionStringNameUat }}'
@@ -42,6 +51,8 @@ stages:
   displayName: 'Deploy to Prod'
   condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   jobs:
+  - deployment: 
+    environment: 'prd-${{ parameters.tribe }}'
   - template: ./deploy.yaml@pipelines
     parameters:
       connectionStringName: '${{ parameters.connectionStringNameProd }}'
