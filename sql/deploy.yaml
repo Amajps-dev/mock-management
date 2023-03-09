@@ -41,8 +41,5 @@ jobs:
       dotnet new tool-manifest
       dotnet tool install microsoft.sqlpackage
       dotnet tool run sqlpackage /Action:Publish /SourceFile:$(System.ArtifactsDirectory)/$(Build.Repository.Name)/$(Build.Repository.Name).dacpac `
-      /TargetConnectionString:"${{ parameters.connectionStringName }}`
-      /v:env="$Env:ENVIRONMENT"
+      /TargetConnectionString:"$(${{ parameters.connectionStringName }})"
     displayName: 'Deploy SQL database'
-    env:
-      ENVIRONMENT: ${{ parameters.environment }}
