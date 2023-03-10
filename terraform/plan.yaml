@@ -69,3 +69,8 @@ jobs:
     condition: ne(variables['Build.Reason'], 'PullRequest')
     artifact: '${{ parameters.environment }}'
     continueOnError: false
+
+  - task: TerraformOutput@1
+    inputs:
+      outputFilePath: '$(Build.ArtifactStagingDirectory)/plan.tfplan'
+      artifactName: '${{ parameters.environment }}'
