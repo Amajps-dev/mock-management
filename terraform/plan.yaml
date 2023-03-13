@@ -70,7 +70,7 @@ jobs:
     artifact: '${{ parameters.environment }}'
     continueOnError: false
 
-  - task: TerraformOutput@1
-    inputs:
-      outputFilePath: '$(Build.ArtifactStagingDirectory)/plan.tfplan'
-      artifactName: '${{ parameters.environment }}'
+  # - task: TerraformOutput@1
+  #   inputs:
+  #     outputFilePath: '$(Build.ArtifactStagingDirectory)/plan.tfplan'
+  #     artifactName: '${{ parameters.environment }}'
