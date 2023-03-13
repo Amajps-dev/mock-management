@@ -96,7 +96,7 @@ try
           "values": [$issues]
         }
       ],
-      "displayName": "$buildNumber",
+      "displayName": "$repositoryName/$buildNumber",
       "lastUpdated": "$(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')",
       "url": "$pipelineUrl",
       "description": "$buildNumber",
