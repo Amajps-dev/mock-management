@@ -1,123 +1,123 @@
 parameters:
-- name: microserviceName
-  type: string
-- name: pool
-  type: string
-- name: environment
-  type: string
-- name: paasEnvironment
-  type: string
-- name: aspNetCoreEnvironment
-  type: string
-- name: namespace
-  type: string
-- name: azureServiceConnection
-  type: string
-- name: acrName
-  type: string
-- name: aksResourceGroup
-  type: string
-- name: aksName
-  type: string
-- name: privateUrl
-  type: string
-- name: publicUrl
-  type: string
-  default: ''
-- name: dependsOn
-  type: string
-  default: ''
-- name: artifactName
-  type: string
-  default: artifact
+  - name: microserviceName
+    type: string
+  - name: pool
+    type: string
+  - name: environment
+    type: string
+  - name: paasEnvironment
+    type: string
+  - name: aspNetCoreEnvironment
+    type: string
+  - name: namespace
+    type: string
+  - name: azureServiceConnection
+    type: string
+  - name: acrName
+    type: string
+  - name: aksResourceGroup
+    type: string
+  - name: aksName
+    type: string
+  - name: privateUrl
+    type: string
+  - name: publicUrl
+    type: string
+    default: ''
+  - name: dependsOn
+    type: string
+    default: ''
+  - name: artifactName
+    type: string
+    default: artifact
 
 jobs:
-- job: inProgressJiraDeployment
-  displayName: Set deployment in progress in Jira
-  steps:
-  - checkout: pipelines
-  - task: PowerShell@2
-    inputs:
-      pwsh: true
-      targetType: 'filePath'
-      filePath: './jira-deployment/push-deployment-to-jira.ps1'
-      arguments: >
-        -pat '$(System.AccessToken)'
-        -jiraApiClientSecret '$(Jira.Api.ClientSecret)'
-        -environment '${{ parameters.environment }}'
-        -state 'InProgress'
-        -buildId '$(Build.BuildId)'
-        -buildNumber '$(Build.BuildNumber)'
-        -buildDefinitionId '$(System.DefinitionId)'
-        -repositoryName '$(Build.Repository.Name)'
+  - job: inProgressJiraDeployment
+    displayName: Set deployment in progress in Jira
+    steps:
+      - checkout: pipelines
+      - task: PowerShell@2
+        inputs:
+          pwsh: true
+          targetType: 'filePath'
+          filePath: './jira-deployment/push-deployment-to-jira.ps1'
+          arguments: >
+            -pat '$(System.AccessToken)'
+            -jiraApiClientSecret '$(Jira.Api.ClientSecret)'
+            -environment '${{ parameters.environment }}'
+            -state 'InProgress'
+            -buildId '$(Build.BuildId)'
+            -buildNumber '$(Build.BuildNumber)'
+            -buildDefinitionId '$(System.DefinitionId)'
+            -repositoryName '$(Build.Repository.Name)'
 
-- job: DockerizeMicroservice
-  displayName: 'Dockerize microservice'
-  ${{ if parameters.dependsOn }}:
-    dependsOn: '${{ parameters.dependsOn }}'
-  timeoutInMinutes: 10
-  pool:
-    vmImage: 'ubuntu-latest'
-  steps:
-  - checkout: self
+  - job: DockerizeMicroservice
+    displayName: 'Dockerize microservice'
+    ${{ if parameters.dependsOn }}:
+      dependsOn: '${{ parameters.dependsOn }}'
+    timeoutInMinutes: 10
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+      - checkout: self
 
-  - task: DownloadBuildArtifacts@1
-    displayName: Download application
-    inputs:
-      buildType: 'current'
-      downloadType: 'single'
-      artifactName: '${{ parameters.artifactName }}'
-      downloadPath: '$(System.ArtifactsDirectory)'
+      - task: DownloadBuildArtifacts@1
+        displayName: Download application
+        inputs:
+          buildType: 'current'
+          downloadType: 'single'
+          artifactName: '${{ parameters.artifactName }}'
+          downloadPath: '$(System.ArtifactsDirectory)'
 
-  - template: steps/build/docker-build-push.yml@pipeline-templates-paas2
-    parameters:
-      imageRepositoryName: '${{ parameters.microserviceName }}'
-      dockerfilePath: '**/*Dockerfile'
-      dockerRegistryServiceConnection: 'ContainerRegistry_MGMT'
-      buildContext: '$(System.ArtifactsDirectory)/${{ parameters.artifactName }}'
+      - template: steps/build/docker-build-push.yml@pipeline-templates-paas2
+        parameters:
+          imageRepositoryName: '${{ parameters.microserviceName }}'
+          dockerfilePath: '**/*Dockerfile'
+          dockerRegistryServiceConnection: 'ContainerRegistry_MGMT'
+          buildContext: '$(System.ArtifactsDirectory)/${{ parameters.artifactName }}'
 
-- template: jobs/deploy/request-azdo-agent.yml@pipeline-templates-paas2
-  parameters:
-    azureServiceConnection: '${{ parameters.azureServiceConnection }}'
-    environment: '${{ parameters.paasEnvironment }}'
-    entityCode: 'esm'
-
-- job: deploy
-  displayName: Push to container registry
-  dependsOn: ['RequestAzDOAgent']
-  pool: '${{ parameters.pool }}'
-  steps:
-  - checkout: self
-
-  - template: steps/deploy/docker-pull-push.yml@pipeline-templates-paas2
-    parameters:
-      azureServiceConnectionSrc: 'Azure_MGMT'
-      acrNameSrc: 'esmglobalinteg1acrm'
-      azureServiceConnectionDest: '${{ parameters.azureServiceConnection }}'
-      acrNameDest: '${{ parameters.acrName }}'
-      imageRepositoryName: '${{ parameters.microserviceName }}'
-
-  - powershell: |
-      $content = (Get-Content $(Build.SourcesDirectory)/manifest.yaml)
-      $content = $content.replace('#{microserviceName}#', '${{ parameters.microserviceName }}')
-      $content = $content.replace('#{environment}#', '${{ parameters.environment }}')
-      $content = $content.replace('#{microserviceVersion}#', '$(Build.BuildNumber)')
-      $content = $content.replace('#{acrName}#', '${{ parameters.acrName }}')
-      $content = $content.replace('#{namespace}#', '${{ parameters.namespace }}')
-      $content = $content.replace('#{AspNetCoreEnvironment}#', '${{ parameters.aspNetCoreEnvironment }}')
-      $content = $content.replace('#{privateUrl}#', '${{ parameters.privateUrl }}')
-      $content = $content.replace('#{publicUrl}#', '${{ parameters.publicUrl }}')
-      Set-Content -Path $(Build.SourcesDirectory)/manifest.yaml -Value $content
-      Get-Content $(Build.SourcesDirectory)/manifest.yaml
-    displayName: Replace manifest variables
-
-  - template: steps/deploy/kube-apply.yml@pipeline-templates-paas2
+  - template: jobs/deploy/request-azdo-agent.yml@pipeline-templates-paas2
     parameters:
       azureServiceConnection: '${{ parameters.azureServiceConnection }}'
-      configFile: '$(Build.SourcesDirectory)/manifest.yaml'
-      kubeRg: '${{ parameters.aksResourceGroup }}'
-      kubeName: '${{ parameters.aksName }}'
+      environment: '${{ parameters.paasEnvironment }}'
+      entityCode: 'esm'
 
-- template: ../jira-deployment/jira-deployment.yaml@pipelines
-  parameters:
-    environment: '${{ parameters.environment }}'
+  - job: deploy
+    displayName: Push to container registry
+    dependsOn: ['RequestAzDOAgent']
+    pool: '${{ parameters.pool }}'
+    steps:
+      - checkout: self
+
+      - template: steps/deploy/docker-pull-push.yml@pipeline-templates-paas2
+        parameters:
+          azureServiceConnectionSrc: 'Azure_MGMT'
+          acrNameSrc: 'esmglobalinteg1acrm'
+          azureServiceConnectionDest: '${{ parameters.azureServiceConnection }}'
+          acrNameDest: '${{ parameters.acrName }}'
+          imageRepositoryName: '${{ parameters.microserviceName }}'
+
+      - powershell: |
+          $content = (Get-Content $(Build.SourcesDirectory)/manifest.yaml)
+          $content = $content.replace('#{microserviceName}#', '${{ parameters.microserviceName }}')
+          $content = $content.replace('#{environment}#', '${{ parameters.environment }}')
+          $content = $content.replace('#{microserviceVersion}#', '$(Build.BuildNumber)')
+          $content = $content.replace('#{acrName}#', '${{ parameters.acrName }}')
+          $content = $content.replace('#{namespace}#', '${{ parameters.namespace }}')
+          $content = $content.replace('#{AspNetCoreEnvironment}#', '${{ parameters.aspNetCoreEnvironment }}')
+          $content = $content.replace('#{privateUrl}#', '${{ parameters.privateUrl }}')
+          $content = $content.replace('#{publicUrl}#', '${{ parameters.publicUrl }}')
+          Set-Content -Path $(Build.SourcesDirectory)/manifest.yaml -Value $content
+          Get-Content $(Build.SourcesDirectory)/manifest.yaml
+        displayName: Replace manifest variables
+
+      - template: steps/deploy/kube-apply.yml@pipeline-templates-paas2
+        parameters:
+          azureServiceConnection: '${{ parameters.azureServiceConnection }}'
+          configFile: '$(Build.SourcesDirectory)/manifest.yaml'
+          kubeRg: '${{ parameters.aksResourceGroup }}'
+          kubeName: '${{ parameters.aksName }}'
+
+  - template: ../jira-deployment/jira-deployment.yaml@pipelines
+    parameters:
+      environment: '${{ parameters.environment }}'

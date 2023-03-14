@@ -1,6 +1,6 @@
 trigger:
-- "main"
-- "develop"
+  - 'main'
+  - 'develop'
 
 pool:
   vmImage: ubuntu-latest
@@ -12,4 +12,4 @@ resources:
       name: 'smarter/pipelines'
 
 stages:
-- template: src/nuget/template-nuget.yaml@templates
+  - template: src/nuget/template-nuget.yaml@templates

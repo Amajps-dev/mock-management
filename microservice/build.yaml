@@ -1,103 +1,103 @@
 jobs:
-- ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-  - template: ../commitLint/commitLint.yaml
+  - ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      - template: ../commitLint/commitLint.yaml
 
-- job: build
-  displayName: Build
-  steps:
-  - checkout: self
-    fetchDepth: 0 # https://github.com/GitTools/actions/blob/main/docs/examples/azure/gitversion/execute/usage-examples.md
-    fetchTags: false
-
-  # - template: ../version/version.yaml@pipelines
-  - template: ../version.yaml
-
-  - task: DotNetCoreCLI@2
-    displayName: Restore
-    inputs:
-      command: 'restore'
-      projects: '**/*.sln'
-      feedsToUse: 'select'
-      vstsFeed: 'a2fb6d3b-636e-4c41-8648-80aabf39e578'
-      verbosityRestore: 'Normal'
-
-  - task: SonarCloudPrepare@1
-    displayName: 'Prepare Analysis'
-    inputs:
-      SonarCloud: 'SonarCloud'
-      organization: edenred-emea-benefits
-      projectKey: edenred-emea-benefits_$(Build.Repository.Name)
-      projectName: '$(Build.Repository.Name)'
-      projectVersion: '$(Build.BuildNumber)'
-      scannerMode: MSBuild
-
-  - task: DotNetCoreCLI@2
+  - job: build
     displayName: Build
-    inputs:
-      command: build
-      projects: '**/*.sln'
-      arguments: '--nologo --no-restore -c Release'
-  
-  - task: DotNetCoreCLI@2
-    displayName: Test
-    inputs:
-      command: test
-      projects: |
-        **/tests/**/*.csproj
-      arguments: '--no-build --no-restore --nologo -c Release --collect "Code coverage"'
-      testRunTitle: '$(Build.DefinitionName)-$(Build.BuildNumber)'
-    timeoutInMinutes: 10
-    continueOnError: false
+    steps:
+      - checkout: self
+        fetchDepth: 0 # https://github.com/GitTools/actions/blob/main/docs/examples/azure/gitversion/execute/usage-examples.md
+        fetchTags: false
 
-  - task: SonarCloudAnalyze@1
-    displayName: 'Run Code Analysis'
+      # - template: ../version/version.yaml@pipelines
+      - template: ../version.yaml
 
-  - task: SonarCloudPublish@1
-    displayName: 'Publish Quality Gate Result'
-  
-  # - task: sonarcloud-buildbreaker@2
-  #   displayName: SonarCloud build breaker
-  #     inputs:
-  #       SonarCloud: 'SonarCloud'
-  #       organization: 'edenred-emea-benefits'
+      - task: DotNetCoreCLI@2
+        displayName: Restore
+        inputs:
+          command: 'restore'
+          projects: '**/*.sln'
+          feedsToUse: 'select'
+          vstsFeed: 'a2fb6d3b-636e-4c41-8648-80aabf39e578'
+          verbosityRestore: 'Normal'
 
-  - task: DotNetCoreCLI@2
-    displayName: Publish
-    condition: ne(variables['Build.Reason'], 'PullRequest')
-    inputs:
-      command: publish
-      publishWebProjects: false
-      projects: |
-        **/*.Api.csproj
-        !**/*.Test.csproj
-        !**/*.Tests.csproj
-      arguments: '--no-build --nologo -c Release -o $(Build.BinariesDirectory)'
-      zipAfterPublish: false
-      modifyOutputPath: false
+      - task: SonarCloudPrepare@1
+        displayName: 'Prepare Analysis'
+        inputs:
+          SonarCloud: 'SonarCloud'
+          organization: edenred-emea-benefits
+          projectKey: edenred-emea-benefits_$(Build.Repository.Name)
+          projectName: '$(Build.Repository.Name)'
+          projectVersion: '$(Build.BuildNumber)'
+          scannerMode: MSBuild
 
-  - task: Docker@2
-    displayName: Build and Push Docker image
-    condition: ne(variables['Build.Reason'], 'PullRequest')
-    inputs:
-      buildContext: '$(System.ArtifactsDirectory)'
-      containerRegistry: 'ContainerRegistry_MGMT'
-      repository: '$(Build.Repository.Name)'
-      command: 'buildAndPush'
-      Dockerfile: '**/Dockerfile'
-      tags: '$(Build.BuildNumber)'
+      - task: DotNetCoreCLI@2
+        displayName: Build
+        inputs:
+          command: build
+          projects: '**/*.sln'
+          arguments: '--nologo --no-restore -c Release'
 
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish microservice artifact'
-    condition: ne(variables['Build.Reason'], 'PullRequest')
-    inputs:
-      PathtoPublish: '$(Build.BinariesDirectory)'
-      ArtifactName: $(Build.Repository.Name)
-      publishLocation: 'Container'
-  
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish artifact'
-    condition: ne(variables['Build.Reason'], 'PullRequest')
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      ArtifactName: 'artifact'
-      publishLocation: 'Container'
+      - task: DotNetCoreCLI@2
+        displayName: Test
+        inputs:
+          command: test
+          projects: |
+            **/tests/**/*.csproj
+          arguments: '--no-build --no-restore --nologo -c Release --collect "Code coverage"'
+          testRunTitle: '$(Build.DefinitionName)-$(Build.BuildNumber)'
+        timeoutInMinutes: 10
+        continueOnError: false
+
+      - task: SonarCloudAnalyze@1
+        displayName: 'Run Code Analysis'
+
+      - task: SonarCloudPublish@1
+        displayName: 'Publish Quality Gate Result'
+
+      # - task: sonarcloud-buildbreaker@2
+      #   displayName: SonarCloud build breaker
+      #     inputs:
+      #       SonarCloud: 'SonarCloud'
+      #       organization: 'edenred-emea-benefits'
+
+      - task: DotNetCoreCLI@2
+        displayName: Publish
+        condition: ne(variables['Build.Reason'], 'PullRequest')
+        inputs:
+          command: publish
+          publishWebProjects: false
+          projects: |
+            **/*.Api.csproj
+            !**/*.Test.csproj
+            !**/*.Tests.csproj
+          arguments: '--no-build --nologo -c Release -o $(Build.BinariesDirectory)'
+          zipAfterPublish: false
+          modifyOutputPath: false
+
+      - task: Docker@2
+        displayName: Build and Push Docker image
+        condition: ne(variables['Build.Reason'], 'PullRequest')
+        inputs:
+          buildContext: '$(System.ArtifactsDirectory)'
+          containerRegistry: 'ContainerRegistry_MGMT'
+          repository: '$(Build.Repository.Name)'
+          command: 'buildAndPush'
+          Dockerfile: '**/Dockerfile'
+          tags: '$(Build.BuildNumber)'
+
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish microservice artifact'
+        condition: ne(variables['Build.Reason'], 'PullRequest')
+        inputs:
+          PathtoPublish: '$(Build.BinariesDirectory)'
+          ArtifactName: $(Build.Repository.Name)
+          publishLocation: 'Container'
+
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish artifact'
+        condition: ne(variables['Build.Reason'], 'PullRequest')
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+          ArtifactName: 'artifact'
+          publishLocation: 'Container'

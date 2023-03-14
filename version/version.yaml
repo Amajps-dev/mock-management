@@ -1,26 +1,26 @@
-steps: 
-# - checkout: pipelines
+steps:
+  # - checkout: pipelines
 
-- task: NodeTool@0
-  displayName: Use node v16
-  inputs:
-    versionSpec: '16.x'
+  - task: NodeTool@0
+    displayName: Use node v16
+    inputs:
+      versionSpec: '16.x'
 
-- task: Npm@1
-  displayName: Install NPM packages
-  inputs:
-    command: 'install'
-    # workingDir: './Pipelines/version'
-    workingDir: './version'
-    
-- task: Npm@1
-  displayName: Bump version & Create release doc (semantic-release)
-  env:
-    GIT_CREDENTIALS: $(System.AccessToken)
-    CSPROJ: $(csproj)
-    HUSKY: 0
-  inputs:
-    command: custom
-    verbose: false
-    customCommand: run ci:release
-    workingDir: './Pipelines/version'
+  - task: Npm@1
+    displayName: Install NPM packages
+    inputs:
+      command: 'install'
+      # workingDir: './Pipelines/version'
+      workingDir: './version'
+
+  - task: Npm@1
+    displayName: Bump version & Create release doc (semantic-release)
+    env:
+      GIT_CREDENTIALS: $(System.AccessToken)
+      CSPROJ: $(csproj)
+      HUSKY: 0
+    inputs:
+      command: custom
+      verbose: false
+      customCommand: run ci:release
+      workingDir: './Pipelines/version'
