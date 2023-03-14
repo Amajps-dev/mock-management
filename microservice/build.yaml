@@ -1,6 +1,6 @@
 jobs:
-# - ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-#   - template: ../commitLint/commitLint.yaml
+- ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+  - template: ../commitLint/commitLint.yaml
 
 - job: build
   displayName: Build
@@ -55,8 +55,8 @@ jobs:
   - task: SonarCloudPublish@1
     displayName: 'Publish Quality Gate Result'
   
-#  - task: sonarcloud-buildbreaker@2
-#    displayName: SonarCloud build breaker
+ - task: sonarcloud-buildbreaker@2
+   displayName: SonarCloud build breaker
     inputs:
       SonarCloud: 'SonarCloud'
       organization: 'edenred-emea-benefits'
