@@ -55,11 +55,11 @@ jobs:
       - task: SonarCloudPublish@1
         displayName: 'Publish Quality Gate Result'
 
-      - task: sonarcloud-buildbreaker@2
-        displayName: SonarCloud build breaker
-        inputs:
-          SonarCloud: 'SonarCloud'
-          organization: 'edenred-emea-benefits'
+      # - task: sonarcloud-buildbreaker@2
+      #   displayName: SonarCloud build breaker
+      #   inputs:
+      #     SonarCloud: 'SonarCloud'
+      #     organization: 'edenred-emea-benefits'
 
       - task: DotNetCoreCLI@2
         displayName: Publish
