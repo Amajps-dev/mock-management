@@ -69,6 +69,7 @@ jobs:
           publishWebProjects: false
           projects: |
             **/*.Api.csproj
+            **/*.Worker.csproj
             !**/*.Test.csproj
             !**/*.Tests.csproj
           arguments: '--no-build --nologo -c Release -o $(Build.BinariesDirectory)'
