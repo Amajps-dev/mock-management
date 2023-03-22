@@ -102,6 +102,8 @@ jobs:
           $content = $content.replace('#{microserviceName}#', '${{ parameters.microserviceName }}')
           $content = $content.replace('#{environment}#', '${{ parameters.environment }}')
           $content = $content.replace('#{microserviceVersion}#', '$(Build.BuildNumber)')
+          $commitHash = (git rev-parse --short HEAD)
+          $content = $content.replace('#{commitHash}#', $commitHash)
           $content = $content.replace('#{acrName}#', '${{ parameters.acrName }}')
           $content = $content.replace('#{namespace}#', '${{ parameters.namespace }}')
           $content = $content.replace('#{AspNetCoreEnvironment}#', '${{ parameters.aspNetCoreEnvironment }}')
