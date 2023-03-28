@@ -65,6 +65,7 @@ try
   {
     $issues = $changes | Select-Object -Property message | Select-String "(lot|ltt|lct|lut|ldt)-([0-9]+)" -AllMatches 
     $issues = $issues | ForEach-Object matches | ForEach-Object Value | Select-Object –unique
+    $issues = $issues | ForEach-Object { $_.ToUpper() }
     $issues = $issues | Join-String -Property {"$($_)"} -DoubleQuote -Separator ', '
 
     Write-Host "$issues"
