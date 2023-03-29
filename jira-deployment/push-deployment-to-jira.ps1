@@ -59,33 +59,35 @@ try
   $getBuildChangeResult = Invoke-WebRequest -URI "$azureDevOpsBaseUrl/_apis/build/builds/$buildId/changes?top=30api-version=7.0" -Method Get -ContentType "application/json" -Headers $headers
   $changes = ($getBuildChangeResult.content | ConvertFrom-Json).value
 
-  Write-Host "Got $($changes.count) issues."
-
-  if ($changes.count -ne 0)
+  $issues = $changes | Select-Object -Property message | Select-String "(lot|ltt|lct|lut|ldt)-([0-9]+)" -AllMatches 
+  if($issues.count -eq 0)
   {
-    $issues = $changes | Select-Object -Property message | Select-String "(lot|ltt|lct|lut|ldt)-([0-9]+)" -AllMatches 
-    $issues = $issues | ForEach-Object matches | ForEach-Object Value | Select-Object –unique
-    $issues = $issues | ForEach-Object { $_.ToUpper() }
-    $issues = $issues | Join-String -Property {"$($_)"} -DoubleQuote -Separator ', '
+    Write-Host "##vso[task.complete result=SucceededWithIssues;]No deployment information to push to Jira."
+    exit
+  }
 
-    Write-Host "$issues"
-    Write-Host ""
+  $issues = $issues | ForEach-Object matches | ForEach-Object Value | Select-Object –unique
+  $issues = $issues | ForEach-Object { $_.ToUpper() }
+  $issues = $issues | Join-String -Property {"$($_)"} -DoubleQuote -Separator ', '
 
-    $getJwtBody = @{
-      audience = "api.atlassian.com"
-      grant_type = "client_credentials"
-      client_id = "kQ1hqYpUdjIWTorIH7rPOn5VmMZohdU9"
-      client_secret = $jiraApiClientSecret
-    } | ConvertTo-Json
+  Write-Host "$issues"
+  Write-Host ""
 
-    $getJwtResult = Invoke-WebRequest -URI "https://api.atlassian.com/oauth/token" -Method Post -ContentType "application/json" -Body $getJwtBody
-    $jwt = ($getJwtResult.content | ConvertFrom-Json).access_token
+  $getJwtBody = @{
+    audience = "api.atlassian.com"
+    grant_type = "client_credentials"
+    client_id = "kQ1hqYpUdjIWTorIH7rPOn5VmMZohdU9"
+    client_secret = $jiraApiClientSecret
+  } | ConvertTo-Json
 
-    $pipelineUrl = "$azureDevOpsBaseUrl/_build/results?buildId=$buildId&view=results"
-    $buildDefinitionUrl = "$azureDevOpsBaseUrl/_build?definitionId=$buildDefinitionId&_a=summary"
+  $getJwtResult = Invoke-WebRequest -URI "https://api.atlassian.com/oauth/token" -Method Post -ContentType "application/json" -Body $getJwtBody
+  $jwt = ($getJwtResult.content | ConvertFrom-Json).access_token
 
-    $environmentDisplayName = $environment.SubString(0,1).ToUpper()+$environment.SubString(1)
-    $deploymentBody = @"
+  $pipelineUrl = "$azureDevOpsBaseUrl/_build/results?buildId=$buildId&view=results"
+  $buildDefinitionUrl = "$azureDevOpsBaseUrl/_build?definitionId=$buildDefinitionId&_a=summary"
+
+  $environmentDisplayName = $environment.SubString(0,1).ToUpper()+$environment.SubString(1)
+  $deploymentBody = @"
 {
   "deployments": [
     {
@@ -119,31 +121,26 @@ try
 }
 "@
 
-    Write-Host "Deployment information: $deploymentBody"
+  Write-Host "Deployment information: $deploymentBody"
 
-    $uri = "https://api.atlassian.com/jira/deployments/0.1/cloud/c86a6e11-6458-49f0-a12b-e051525287f7/bulk"
-    $headers = @{Authorization = "Bearer $jwt" };
-    $pushDeploymentResult = Invoke-RestMethod -Uri $uri -Method Post -ContentType "application/json" -Headers $headers -Body $deploymentBody
+  $uri = "https://api.atlassian.com/jira/deployments/0.1/cloud/c86a6e11-6458-49f0-a12b-e051525287f7/bulk"
+  $headers = @{Authorization = "Bearer $jwt" };
+  $pushDeploymentResult = Invoke-RestMethod -Uri $uri -Method Post -ContentType "application/json" -Headers $headers -Body $deploymentBody
 
-    Write-Host ($pushDeploymentResult | Format-Table | Out-String)
+  Write-Host ($pushDeploymentResult | Format-Table | Out-String)
 
-    if ($pushDeploymentResult.acceptedDeployments -ne $null) 
-    {
-      Write-Host ($pushDeploymentResult.acceptedDeployments | Format-Table | Out-String)
-    }
-    
-    if ($pushDeploymentResult.rejectedDeployments -ne $null) 
-    {
-      Write-Host "##vso[task.logissue type=error]Push deployment information to Jira failed".
-    }
-    if ($pushDeploymentResult.unknownAssociations -ne $null) 
-    {
-      Write-Host "##vso[task.logissue type=error]]Push deployment information to Jira succeeded with issues: $($pushDeploymentResult.unknownAssociations)."
-    }
-  }
-  else 
+  if ($pushDeploymentResult.acceptedDeployments -ne $null) 
   {
-    Write-Host "##vso[task.complete result=SucceededWithIssues;]No issue found to push to Jira."
+    Write-Host ($pushDeploymentResult.acceptedDeployments | Format-Table | Out-String)
+  }
+  
+  if ($pushDeploymentResult.rejectedDeployments -ne $null) 
+  {
+    Write-Host "##vso[task.logissue type=error]Push deployment information to Jira failed".
+  }
+  if ($pushDeploymentResult.unknownAssociations -ne $null) 
+  {
+    Write-Host "##vso[task.logissue type=error]]Push deployment information to Jira succeeded with issues: $($pushDeploymentResult.unknownAssociations)."
   }
 }
 catch 
