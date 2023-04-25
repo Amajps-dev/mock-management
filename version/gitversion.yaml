@@ -1,0 +1,17 @@
+mode: MainLine
+# https://regex101.com/r/m8wX1r/1
+major-version-bump-message: "^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\\([\\w-]*\\))?(!:|:.*\\n\\n((.+\\n)+\\n)?BREAKING CHANGE:)|💥)"
+# https://regex101.com/r/gXwduT/2
+minor-version-bump-message: "^feat(\\([\\w-]*\\))?:|✨"
+# https://regex101.com/r/Qu4Zf2/1
+patch-version-bump-message: "^((build|chore|ci|docs|fix|perf|refactor|revert|style|test)(\\([\\w-]*\\))?:|[🎨⚡️🔥🐛🚑️📝🚀💄🎉✅🔒️🔐🔖🚨🚧💚⬇️⬆️📌👷📈♻️➕➖🔧🔨🌐✏️💩⏪️🔀📦️👽️🚚📄🍱♿️💡🍻💬🗃️🔊🔇👥🚸🏗️📱🤡🥚🙈📸⚗️🔍️🏷️🌱🚩🥅💫🗑️🛂🩹🧐⚰️🧪👔🩺🧱🧑‍💻💸🧵🦺])"
+branches:
+  feature:
+    regex: ^feature[\/]
+    tag: 'alpha'
+  main:
+    regex: ^main$
+    tag: 'beta'
+  release:
+    regex: ^release[\/]
+    tag: ''

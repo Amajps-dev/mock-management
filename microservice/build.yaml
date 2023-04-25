@@ -1,7 +1,4 @@
 jobs:
-  # - ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-  #     - template: ../commitLint/commitLint.yaml
-
   - job: build
     displayName: Build
     steps:
@@ -9,8 +6,7 @@ jobs:
         fetchDepth: 0 # https://github.com/GitTools/actions/blob/main/docs/examples/azure/gitversion/execute/usage-examples.md
         fetchTags: false
 
-      # - template: ../version/version.yaml@pipelines
-      - template: ../version.yaml
+      - template: ../version/calculate.yaml@pipelines
 
       - task: DotNetCoreCLI@2
         displayName: Restore

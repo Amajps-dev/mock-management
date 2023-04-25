@@ -1,8 +1,0 @@
-{
-  "private": true,
-  "devDependencies": {
-    "@commitlint/cli": "17.4.2",
-    "@commitlint/config-conventional": "17.4.2",
-    "commitlint-plugin-function-rules": "1.7.1"
-  }
-}
