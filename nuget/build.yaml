@@ -1,0 +1,66 @@
+steps:
+  - template: ../version.yaml
+
+  - task: SonarCloudPrepare@1
+    displayName: 'Prepare Analysis'
+    inputs:
+      SonarCloud: 'SonarCloud'
+      organization: edenred-emea-benefits
+      projectKey: edenred-emea-benefits_$(Build.Repository.Name)
+      projectName: '$(Build.Repository.Name)'
+      projectVersion: '$(Build.BuildNumber)'
+      scannerMode: MSBuild
+      extraProperties: |
+        sonar.cs.vscoveragexml.reportsPaths=$(Build.SourcesDirectory)/coverage.xml
+
+  - task: DotNetCoreCLI@2
+    displayName: Restore
+    inputs:
+      command: 'restore'
+      projects: '**/*.sln'
+      feedsToUse: 'select'
+      vstsFeed: 'a2fb6d3b-636e-4c41-8648-80aabf39e578'
+      verbosityRestore: 'Normal'
+
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      command: build
+      projects: '**/*.sln'
+      arguments: '--nologo --no-restore -c Release'
+
+  - pwsh: |
+      dotnet new tool-manifest
+      dotnet tool install dotnet-coverage --ignore-failed-sources
+      dotnet tool run dotnet-coverage collect "dotnet test --logger trx;LogFileName=test.xml" -f xml -o "coverage.xml"
+    displayName: 'Test'
+
+  - task: SonarCloudAnalyze@1
+    condition: succeeded()
+    displayName: 'Run Code Analysis'
+    enabled: true
+
+  - task: DotNetCoreCLI@2
+    displayName: Pack
+    inputs:
+      command: pack
+      projects: |
+        src/**/*.csproj
+      arguments: '-p:PackageVersion=$(Build.BuildNumber) -o $(Build.ArtifactStagingDirectory) --include-symbols --verbosity normal'
+      verbosityPack: Normal
+
+  - task: PublishSymbols@2
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+    displayName: 'Publish symbols'
+    inputs:
+      SymbolsFolder: '$(Build.ArtifactStagingDirectory)'
+      SearchPattern: '**/*.pdb'
+      SymbolServerType: teamServices
+      TreatNotIndexedAsWarning: true
+      SymbolsArtifactName: 'Symbols_$(Build.BuildId)-$(Build.BuildNumber)'
+
+  - task: PublishBuildArtifacts@1
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+    displayName: 'Publish Artifact'
+    inputs:
+      ArtifactName: 'packages'

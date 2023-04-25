@@ -7,5 +7,5 @@ steps:
     inputs:
       command: push
       packagesToPush: '$(Pipeline.Workspace)/packages/**/*.nupkg;!$(System.DefaultWorkingDirectory)/**/*.symbols.nupkg'
-      publishVstsFeed: 'b95ddfc1-aa53-4ce8-8d18-44340050b2ee'
+      publishVstsFeed: 'a2fb6d3b-636e-4c41-8648-80aabf39e578'
       allowPackageConflicts: true

@@ -1,6 +1,3 @@
-parameters:
-  sonarProjectName: ''
-
 stages:
   - stage: Build
     displayName: Build
@@ -8,9 +5,7 @@ stages:
       - job: Build
         displayName: Build
         steps:
-          - template: build-nuget.yml
-            parameters:
-            sonarProjectName: ${{ parameters.sonarProjectName }}
+          - template: build.yaml
 
   - stage: Release
     displayName: Release
@@ -19,4 +14,4 @@ stages:
       - job: Release
         displayName: Release
         steps:
-          - template: release-nuget.yml
+          - template: release.yaml
