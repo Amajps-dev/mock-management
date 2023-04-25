@@ -37,7 +37,7 @@ steps:
           $proj.Save($path)
         }
 
-        $assemblyVersion = "$(GitVersion.Major).$(GitVersion.Major).$(GitVersion.Minor).$(GitVersion.CommitsSinceVersionSource)"
+        $assemblyVersion = "$(GitVersion.Major).$(GitVersion.Minor).$(GitVersion.Path).$(GitVersion.CommitsSinceVersionSource)"
 
         $projects = Get-ChildItem -Path $(Build.SourcesDirectory) -Filter *.csproj -Recurse
 
