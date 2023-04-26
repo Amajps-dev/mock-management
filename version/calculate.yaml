@@ -8,7 +8,7 @@ steps:
   displayName: Calculate version 
   inputs: 
     useConfigFile: True 
-    configFilePath: "gitversion.yaml"
+    configFilePath: "gitversion.yml"
 
 - task: PowerShell@2
   displayName: Update version
