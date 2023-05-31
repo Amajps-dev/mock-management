@@ -61,20 +61,16 @@ jobs:
     steps:
       - checkout: self
 
-      - task: DownloadBuildArtifacts@1
+      - download: current
         displayName: Download application
-        inputs:
-          buildType: 'current'
-          downloadType: 'single'
-          artifactName: '${{ parameters.artifactName }}'
-          downloadPath: '$(System.ArtifactsDirectory)'
+        artifact: '${{ parameters.artifactName }}'
 
       - template: steps/build/docker-build-push.yml@pipeline-templates-paas2
         parameters:
           imageRepositoryName: '${{ parameters.microserviceName }}'
           dockerfilePath: '**/*Dockerfile'
           dockerRegistryServiceConnection: 'ContainerRegistry_MGMT'
-          buildContext: '$(System.ArtifactsDirectory)/${{ parameters.artifactName }}'
+          buildContext: '$(Pipeline.Workspace)/${{ parameters.artifactName }}'
 
   - template: jobs/deploy/request-azdo-agent.yml@pipeline-templates-paas2
     parameters:

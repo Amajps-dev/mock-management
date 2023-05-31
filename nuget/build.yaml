@@ -59,8 +59,7 @@ steps:
       TreatNotIndexedAsWarning: true
       SymbolsArtifactName: 'Symbols_$(Build.BuildId)-$(Build.BuildNumber)'
 
-  - task: PublishBuildArtifacts@1
-    condition: ne(variables['Build.Reason'], 'PullRequest')
+  - publish:
     displayName: 'Publish Artifact'
-    inputs:
-      ArtifactName: 'packages'
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+    artifact: 'packages'
