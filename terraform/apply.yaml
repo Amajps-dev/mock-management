@@ -10,9 +10,13 @@ jobs:
     variables:
       parametersFileName: 'variables.tfvars.json'
     steps:
-      - download: current
+      - task: DownloadBuildArtifacts@1
         displayName: Download application
-        artifact: '${{ parameters.environment }}'
+        inputs:
+          buildType: 'current'
+          downloadType: 'single'
+          artifactName: '${{ parameters.environment }}'
+          downloadPath: '$(System.DefaultWorkingDirectory)/src/terraform/'
 
       - task: TerraformTaskV3@3
         displayName: 'Terraform init'

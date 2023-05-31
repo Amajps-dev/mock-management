@@ -24,11 +24,14 @@ jobs:
 
 - job:
   pool: '${{ parameters.pool }}'
-  steps:
-
-  - download: current
+  steps: 
+  - task: DownloadBuildArtifacts@1
     displayName: Download artifact
-    artifact: '$(Build.Repository.Name)'
+    inputs:
+      buildType: 'current'
+      downloadType: 'single'
+      artifactName: '$(Build.Repository.Name)'
+      downloadPath: '$(System.ArtifactsDirectory)'
 
   - task: AzureKeyVault@2
     displayName: 'Get connection string from key vault'

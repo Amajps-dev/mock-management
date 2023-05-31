@@ -87,12 +87,18 @@ jobs:
           Dockerfile: '**/Dockerfile'
           tags: '$(Build.BuildNumber)'
 
-      - publish: $(Build.BinariesDirectory)
+      - task: PublishBuildArtifacts@1
         displayName: 'Publish microservice artifact'
         condition: ne(variables['Build.Reason'], 'PullRequest')
-        artifact: $(Build.Repository.Name)
+        inputs:
+          PathtoPublish: '$(Build.BinariesDirectory)'
+          ArtifactName: $(Build.Repository.Name)
+          publishLocation: 'Container'
 
-      - publish: $(Build.ArtifactStagingDirectory)
+      - task: PublishBuildArtifacts@1
         displayName: 'Publish artifact'
         condition: ne(variables['Build.Reason'], 'PullRequest')
-        artifact: 'artifact'
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+          ArtifactName: 'artifact'
+          publishLocation: 'Container'
