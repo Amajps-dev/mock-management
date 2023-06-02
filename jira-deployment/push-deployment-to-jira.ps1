@@ -56,7 +56,7 @@ try
 
   $base64AuthInfo = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$pat"))
   $headers = @{ Authorization = "Basic $base64AuthInfo" }      
-  $getBuildChangeResult = Invoke-WebRequest -URI "$azureDevOpsBaseUrl/_apis/build/builds/$buildId/changes?top=30api-version=7.0" -Method Get -ContentType "application/json" -Headers $headers
+  $getBuildChangeResult = Invoke-WebRequest -URI "$azureDevOpsBaseUrl/_apis/build/builds/$buildId/changes?top=30&api-version=7.0" -Method Get -ContentType "application/json" -Headers $headers
   $changes = ($getBuildChangeResult.content | ConvertFrom-Json).value
 
   $issues = $changes | Select-Object -Property message | Select-String "(lot|ltt|lct|lut|ldt)-([0-9]+)" -AllMatches 
