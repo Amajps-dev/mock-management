@@ -19,6 +19,7 @@ jobs:
 
       - task: SonarCloudPrepare@1
         displayName: 'Prepare Analysis'
+        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
         inputs:
           SonarCloud: 'SonarCloud'
           organization: edenred-emea-benefits
@@ -51,12 +52,15 @@ jobs:
 
       - task: SonarCloudAnalyze@1
         displayName: 'Run Code Analysis'
+        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
 
       - task: SonarCloudPublish@1
         displayName: 'Publish Quality Gate Result'
+        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
 
       - task: sonarcloud-buildbreaker@2
         displayName: SonarCloud build breaker
+        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
         inputs:
           SonarCloud: 'SonarCloud'
           organization: 'edenred-emea-benefits'
