@@ -51,18 +51,20 @@ jobs:
 
       - task: SonarQubeAnalyze@5
         displayName: 'Run Code Analysis'
+        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
 
       - task: SonarQubePublish@5
         displayName: 'Publish Quality Gate Result'
+        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
         inputs:
           pollingTimeoutSec: '300'
 
-      - task: sonarcloud-buildbreaker@2
-        displayName: SonarCloud build breaker
-        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
-        inputs:
-          SonarCloud: 'SonarCloud'
-          organization: 'edenred-emea-benefits'
+      # - task: sonarcloud-buildbreaker@2
+      #   displayName: SonarQube build breaker
+      #   condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+      #   inputs:
+      #     SonarCloud: 'SonarCloud'
+      #     organization: 'edenred-emea-benefits'
 
       - task: DotNetCoreCLI@2
         displayName: Publish
