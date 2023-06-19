@@ -16,17 +16,16 @@ jobs:
           feedsToUse: 'select'
           vstsFeed: 'a2fb6d3b-636e-4c41-8648-80aabf39e578'
           verbosityRestore: 'Normal'
-
-      - task: SonarCloudPrepare@1
+      
+      - task: SonarQubePrepare@5
         displayName: 'Prepare Analysis'
         condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
         inputs:
-          SonarCloud: 'SonarCloud'
-          organization: edenred-emea-benefits
-          projectKey: edenred-emea-benefits_$(Build.Repository.Name)
-          projectName: '$(Build.Repository.Name)'
+          SonarQube: 'SonarQube'
+          projectKey: smarter-$(Build.Repository.Name)
+          # projectName: '$(Build.Repository.Name)'
           projectVersion: '$(Build.BuildNumber)'
-          scannerMode: MSBuild
+          scannerMode: 'MSBuild'
           extraProperties: |
             sonar.cs.vscoveragexml.reportsPaths=$(Build.SourcesDirectory)/coverage.xml
 
@@ -50,13 +49,13 @@ jobs:
           mergeTestResults: true
           testRunTitle: '$(Build.DefinitionName)-$(Build.BuildNumber)'
 
-      - task: SonarCloudAnalyze@1
+      - task: SonarQubeAnalyze@5
         displayName: 'Run Code Analysis'
-        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
 
-      - task: SonarCloudPublish@1
+      - task: SonarQubePublish@5
         displayName: 'Publish Quality Gate Result'
-        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+        inputs:
+          pollingTimeoutSec: '300'
 
       - task: sonarcloud-buildbreaker@2
         displayName: SonarCloud build breaker
