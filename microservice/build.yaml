@@ -59,12 +59,12 @@ jobs:
         inputs:
           pollingTimeoutSec: '300'
 
-      # - task: sonarcloud-buildbreaker@2
-      #   displayName: SonarQube build breaker
-      #   condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
-      #   inputs:
-      #     SonarCloud: 'SonarCloud'
-      #     organization: 'edenred-emea-benefits'
+      
+      - task: sonar-buildbreaker@8
+        displayName: SonarQube build breaker
+        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+        inputs:
+          SonarQube: 'SonarQube'
 
       - task: DotNetCoreCLI@2
         displayName: Publish
