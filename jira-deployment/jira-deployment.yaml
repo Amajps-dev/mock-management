@@ -1,7 +1,7 @@
 jobs:
   - job: jiraDeploymentSucceeded
     displayName: Push succeeded deployment to Jira
-    dependsOn: ['deploy', 'DockerizeMicroservice', 'RequestAzDOAgent']
+    dependsOn: ['deploy', 'RequestAzDOAgent']
     condition: and(always(), succeeded())
     steps:
       - checkout: pipelines
@@ -22,7 +22,7 @@ jobs:
 
   - job: jiraDeploymentFailed
     displayName: Push failed deployment to Jira
-    dependsOn: ['deploy', 'DockerizeMicroservice', 'RequestAzDOAgent']
+    dependsOn: ['deploy', 'RequestAzDOAgent']
     condition: and(always(), failed())
     steps:
       - checkout: pipelines
@@ -43,7 +43,7 @@ jobs:
 
   - job: jiraDeploymentCanceled
     displayName: Push canceled deployment to Jira
-    dependsOn: ['deploy', 'DockerizeMicroservice', 'RequestAzDOAgent']
+    dependsOn: ['deploy', 'RequestAzDOAgent']
     condition: and(always(), canceled())
     steps:
       - checkout: pipelines

@@ -1,8 +1,6 @@
 parameters:
   - name: microserviceName
     type: string
-  - name: assemblyName
-    type: string
   - name: namespace
     type: string
     values:
@@ -52,7 +50,6 @@ stages:
           aksName: 'esm-app-integ-1-aks-d'
           privateUrl: 'smarter-dev2.edenred.net'
           publicUrl: '${{ variables.publicUrl }}'
-          artifactName: '$(Build.Repository.Name)'
       - job: automatedtests
         displayName: Run automated tests
         dependsOn: deploy
@@ -98,7 +95,6 @@ stages:
           aksName: 'esm-app-integ-1-aks-u'
           privateUrl: 'smarter-uat.edenred.net'
           publicUrl: '${{ variables.publicUrl }}'
-          artifactName: '$(Build.Repository.Name)'
 
   - stage: prd
     displayName: Deploy to Prod
@@ -128,4 +124,3 @@ stages:
           aksName: 'esm-app-integ-1-aks-p'
           privateUrl: 'smarter.edenred.net'
           publicUrl: '${{ variables.publicUrl }}'
-          artifactName: '$(Build.Repository.Name)'
