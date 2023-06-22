@@ -1,0 +1,47 @@
+parameters:
+  - name: functionName
+    type: string
+  - name: functionResourceGroup
+    type: string
+  - name: pool
+    type: string
+  - name: environment
+    type: string
+  - name: aspNetCoreEnvironment
+    type: string
+  - name: azureServiceConnection
+    type: string
+  - name: artifactName
+    type: string
+    default: artifact
+
+jobs:
+  - job: deployFunction
+    displayName: 'Deploy function'
+    steps:
+    - task: DownloadBuildArtifacts@1
+      displayName: Download application
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: '$(Build.Repository.Name)'
+        downloadPath: '$(System.ArtifactsDirectory)'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(System.ArtifactsDirectory)/$(Build.Repository.Name)'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Pipeline.Workspace)/publish.zip'
+        replaceExistingArchive: true
+
+    - task: AzureCLI@2
+      displayName: Deploy function
+      inputs:
+        azureSubscription: '${{ parameters.azureServiceConnection }}'
+        scriptType: 'pscore'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az functionapp deployment source config-zip -g ${{ parameters.functionResourceGroup }} -n ${{ parameters.functionName }} --src publish.zip
+        workingDirectory: '$(Pipeline.Workspace)'
+        failOnStandardError: false

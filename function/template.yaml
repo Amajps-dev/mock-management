@@ -1,0 +1,82 @@
+parameters:
+  - name: microserviceName
+    type: string
+  - name: assemblyName
+    type: string
+  - name: tribe
+    type: string
+    values:
+      - 'enabler'
+      - 'client'
+      - 'user'
+      - 'common'
+  - name: functionResourceGroupDev
+    type: string
+  - name: functionNameDev
+    type: string
+  - name: functionResourceGroupUat
+    type: string
+  - name: functionNameUat
+    type: string
+  - name: functionResourceGroupPrd
+    type: string
+  - name: functionNamePrd
+    type: string
+
+stages:
+  - stage: build
+    displayName: Build
+    jobs:
+      - template: ../microservice/build.yaml@pipelines
+        parameters:
+          pushToDocker: false
+
+  - stage: dev
+    displayName: Deploy to Dev
+    condition: or(and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main')), and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/feat')), and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+    variables:
+      - group: Tools
+    jobs:
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          functionResourceGroup: ${{ parameters.functionResourceGroupDev }}
+          functionName: ${{ parameters.functionNameDev }}
+          pool: 'SmartER-dev'
+          environment: 'dev'
+          aspNetCoreEnvironment: 'Dev'
+          azureServiceConnection: 'Azure_DEV'
+          
+  - stage: uat
+    displayName: Deploy to UAT
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+    variables:
+      - group: Tools
+    jobs:
+      - deployment:
+        environment: 'uat-${{ parameters.tribe }}'
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          functionResourceGroup: ${{ parameters.functionResourceGroupUat }}
+          functionName: ${{ parameters.functionNameUat }}
+          pool: 'SmartER-uat'
+          environment: 'uat'
+          aspNetCoreEnvironment: 'Uat'
+          azureServiceConnection: 'Azure_UAT'
+
+  - stage: prod
+    displayName: Deploy to Prod
+    dependsOn: uat
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    variables:
+      - group: Tools
+    jobs:
+      - deployment:
+        environment: 'prd-${{ parameters.tribe }}'
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          functionResourceGroup: ${{ parameters.functionResourceGroupPrd }}
+          functionName: ${{ parameters.functionNamePrd }}
+          pool: 'SmartER-prd'
+          environment: 'prd'
+          aspNetCoreEnvironment: 'Prd'
+          azureServiceConnection: 'Azure_PROD'
