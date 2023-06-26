@@ -39,7 +39,7 @@ jobs:
       - pwsh: |
           dotnet new tool-manifest
           dotnet tool install dotnet-coverage --ignore-failed-sources
-          dotnet tool run dotnet-coverage collect "dotnet test --logger trx;LogFileName=test.xml" -f xml -o "coverage.xml"
+          dotnet tool run dotnet-coverage collect "dotnet test --no-restore --logger trx;LogFileName=test.xml" -f xml -o "coverage.xml"
         displayName: 'Test'
 
       - task: PublishTestResults@2
