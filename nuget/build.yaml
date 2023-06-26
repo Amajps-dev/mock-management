@@ -52,6 +52,7 @@ steps:
 
   - task: DotNetCoreCLI@2
     displayName: Pack
+    condition: succeeded()
     inputs:
       command: pack
       projects: |
@@ -60,7 +61,7 @@ steps:
       verbosityPack: Normal
 
   - task: PublishSymbols@2
-    condition: ne(variables['Build.Reason'], 'PullRequest')
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
     displayName: 'Publish symbols'
     inputs:
       SymbolsFolder: '$(Build.ArtifactStagingDirectory)'
@@ -70,7 +71,7 @@ steps:
       SymbolsArtifactName: 'Symbols_$(Build.BuildId)-$(Build.BuildNumber)'
 
   - task: PublishBuildArtifacts@1
-    condition: ne(variables['Build.Reason'], 'PullRequest')
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
     displayName: 'Publish Artifact'
     inputs:
       ArtifactName: 'packages'
