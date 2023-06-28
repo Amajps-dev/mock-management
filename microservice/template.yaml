@@ -98,8 +98,8 @@ stages:
 
   - stage: prd
     displayName: Deploy to Prod
-    dependsOn: uat
-    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+    dependsOn: ['build']
     variables:
       - group: Tools
       - name: publicUrl
