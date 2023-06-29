@@ -26,7 +26,9 @@ steps:
     inputs:
       command: build
       projects: '**/*.sln'
-      arguments: '--nologo --no-restore -c Release'
+      arguments: '--nologo --no-restore -c Release --output $(Build.ArtifactStagingDirectory)'
+
+  - task: NuGetAuthenticate@1
 
   - pwsh: |
       dotnet new tool-manifest
@@ -50,15 +52,15 @@ steps:
     inputs:
       SonarQube: 'SonarQube'
 
-  - task: DotNetCoreCLI@2
-    displayName: Pack
-    condition: succeeded()
-    inputs:
-      command: pack
-      projects: |
-        src/**/*.csproj
-      arguments: '-p:PackageVersion=$(Build.BuildNumber) -o $(Build.ArtifactStagingDirectory) --include-symbols --verbosity normal'
-      verbosityPack: Normal
+  # - task: DotNetCoreCLI@2
+  #   displayName: Pack
+  #   condition: succeeded()
+  #   inputs:
+  #     command: pack
+  #     projects: |
+  #       src/**/*.csproj
+  #     arguments: '-p:PackageVersion=$(Build.BuildNumber) -o $(Build.ArtifactStagingDirectory) --include-symbols --verbosity normal'
+  #     verbosityPack: Normal
 
   - task: PublishSymbols@2
     condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
