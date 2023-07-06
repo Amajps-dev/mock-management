@@ -3,6 +3,8 @@ jobs:
     displayName: Push succeeded deployment to Jira
     dependsOn: ['deploy', 'RequestAzDOAgent']
     condition: and(always(), succeeded())
+    variables:
+      - group: Tools
     steps:
       - checkout: pipelines
       - task: PowerShell@2
@@ -24,6 +26,8 @@ jobs:
     displayName: Push failed deployment to Jira
     dependsOn: ['deploy', 'RequestAzDOAgent']
     condition: and(always(), failed())
+    variables:
+      - group: Tools
     steps:
       - checkout: pipelines
       - task: PowerShell@2
@@ -45,6 +49,8 @@ jobs:
     displayName: Push canceled deployment to Jira
     dependsOn: ['deploy', 'RequestAzDOAgent']
     condition: and(always(), canceled())
+    variables:
+      - group: Tools
     steps:
       - checkout: pipelines
       - task: PowerShell@2

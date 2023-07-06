@@ -28,6 +28,8 @@ parameters:
 jobs:
   - job: inProgressJiraDeployment
     displayName: Set deployment in progress in Jira
+    variables:
+      - group: Tools
     steps:
       - checkout: pipelines
       - task: PowerShell@2

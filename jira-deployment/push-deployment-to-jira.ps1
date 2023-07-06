@@ -145,6 +145,5 @@ try
 }
 catch 
 {
-  Write-Host "An error occurred:"
-  Write-Host $_
+  Write-Host "##vso[task.logissue type=error]Push deployment information to Jira failed: $_"
 }
