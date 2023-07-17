@@ -4,15 +4,16 @@ parameters:
   - name: namespace
     type: string
     values:
-      - 'frontend'
-      - 'orchestration'
-      - 'backend'
+      - frontend
+      - orchestration
+      - backend
   - name: tribe
     type: string
     values:
-      - 'enabler'
-      - 'client'
-      - 'user'
+      - client
+      - enabler
+      - user
+      - shared
   - name: jiraTestsId
     type: string
     default: ''

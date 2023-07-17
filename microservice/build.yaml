@@ -16,7 +16,7 @@ jobs:
           feedsToUse: 'select'
           vstsFeed: 'a2fb6d3b-636e-4c41-8648-80aabf39e578'
           verbosityRestore: 'Normal'
-      
+
       - task: SonarQubePrepare@5
         displayName: 'Prepare Analysis'
         condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
@@ -59,7 +59,6 @@ jobs:
         inputs:
           pollingTimeoutSec: '300'
 
-      
       - task: sonar-buildbreaker@8
         displayName: SonarQube build breaker
         condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
