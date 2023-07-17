@@ -59,6 +59,7 @@ jobs:
     pool: '${{ parameters.pool }}'
     steps:
       - checkout: self
+        persistCredentials: true
 
       - template: steps/deploy/docker-pull-push.yml@pipeline-templates-paas2
         parameters:
@@ -90,6 +91,15 @@ jobs:
           configFile: '$(Build.SourcesDirectory)/manifest.yaml'
           kubeRg: '${{ parameters.aksResourceGroup }}'
           kubeName: '${{ parameters.aksName }}'
+
+      # Create a tag with an ISO UTC datetime
+      # ex: prod/19700101T000000Z-release-0.0
+      - script: |
+          tag=${{ parameters.environment }}/$(date -u +'%Y%m%dT%H%M%SZ')-release-$(Build.SourceBranchName)
+          git tag $tag
+          git push origin $tag
+        displayName: Git tag
+        condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
 
   - template: ../jira-deployment/jira-deployment.yaml@pipelines
     parameters:
