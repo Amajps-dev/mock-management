@@ -1,69 +1,69 @@
 parameters:
-- name: connectionStringNameDev
-  type: string
-- name: connectionStringNameUat
-  type: string
-- name: connectionStringNameProd
-  type: string
-- name: tribe
-  type: string
-  values:
-  - 'enabler'
-  - 'client'
-  - 'user'
-- name: allowDataLoss
-  type: boolean
-  default: false
-      
+  - name: allowDataLoss
+    type: boolean
+    default: false
+  - name: connectionStrings
+    type: object
+    default: []
+  - name: tribe
+    type: string
+    values:
+      - client
+      - enabler
+      - user
+
 stages:
-- stage: build
-  displayName: Build
-  jobs:
-  - template: ./build.yaml@pipelines
+  - stage: build
+    displayName: Build
+    jobs:
+      - template: ./build.yaml@pipelines
 
-- stage: deployDev
-  displayName: 'Deploy to Dev'
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-  jobs:
-  - template: ./deploy.yaml@pipelines
-    parameters:
-      connectionStringName: '${{ parameters.connectionStringNameDev }}'
-      azureServiceConnection: 'Azure_DEV'
-      environment: 'dev'
-      paasEnvironment: 'DEV'
-      pool: 'SmartER-dev'
-      keyVaultName: 'esm-app-integ-1-kv-d'
-      allowDataLoss: ${{ parameters.allowDataLoss }}
+  - ${{ each connectionString in parameters.connectionStrings }}:
+      - stage: deployDev_${{ connectionString.tenant }}
+        displayName: Deploy to Dev ${{ connectionString.tenant }}
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+        dependsOn: [build]
+        jobs:
+          - template: ./deploy.yaml@pipelines
+            parameters:
+              connectionStringName: '${{ connectionString.dev }}'
+              azureServiceConnection: Azure_DEV
+              environment: dev
+              paasEnvironment: DEV
+              pool: SmartER-dev
+              keyVaultName: esm-app-integ-1-kv-d
+              allowDataLoss: ${{ parameters.allowDataLoss }}
 
-- stage: deployUat
-  displayName: 'Deploy to Uat'
-  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
-  dependsOn: ["build"]
-  jobs:
-  - deployment: 
-    environment: 'uat-${{ parameters.tribe }}'
-  - template: ./deploy.yaml@pipelines
-    parameters:
-      connectionStringName: '${{ parameters.connectionStringNameUat }}'
-      azureServiceConnection: 'Azure_UAT'
-      environment: 'uat'
-      paasEnvironment: 'UAT'
-      pool: 'SmartER-uat'
-      keyVaultName: 'esm-app-integ-1-kv-u'
-      allowDataLoss: ${{ parameters.allowDataLoss }}
+      - stage: deployUat_${{ connectionString.tenant }}
+        displayName: Deploy to Uat ${{ connectionString.tenant }}
+        condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+        dependsOn: [build]
+        jobs:
+          - deployment:
+            environment: uat-${{ parameters.tribe }}
+          - template: ./deploy.yaml@pipelines
+            parameters:
+              connectionStringName: '${{ connectionString.uat }}'
+              azureServiceConnection: Azure_UAT
+              environment: uat
+              paasEnvironment: UAT
+              pool: SmartER-uat
+              keyVaultName: esm-app-integ-1-kv-u
+              allowDataLoss: ${{ parameters.allowDataLoss }}
 
-- stage: deployProd
-  displayName: 'Deploy to Prod'
-  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
-  jobs:
-  - deployment: 
-    environment: 'prd-${{ parameters.tribe }}'
-  - template: ./deploy.yaml@pipelines
-    parameters:
-      connectionStringName: '${{ parameters.connectionStringNameProd }}'
-      azureServiceConnection: 'Azure_PROD'
-      environment: 'prod'
-      paasEnvironment: 'PROD'
-      pool: 'SmartER-prd'
-      keyVaultName: 'esm-app-integ-1-kv-p'
-      allowDataLoss: ${{ parameters.allowDataLoss }}
+      - stage: deployProd_${{ connectionString.tenant }}
+        displayName: Deploy to Prod ${{ connectionString.tenant }}
+        condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+        dependsOn: [build]
+        jobs:
+          - deployment:
+            environment: prd-${{ parameters.tribe }}
+          - template: ./deploy.yaml@pipelines
+            parameters:
+              connectionStringName: '${{ connectionString.prd }}'
+              azureServiceConnection: Azure_PROD
+              environment: prod
+              paasEnvironment: PROD
+              pool: SmartER-prd
+              keyVaultName: esm-app-integ-1-kv-p
+              allowDataLoss: ${{ parameters.allowDataLoss }}
