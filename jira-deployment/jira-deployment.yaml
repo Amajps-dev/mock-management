@@ -1,7 +1,7 @@
 jobs:
   - job: jiraDeploymentSucceeded
     displayName: Push succeeded deployment to Jira
-    dependsOn: ['deploy', 'RequestAzDOAgent']
+    dependsOn: [deploy, RequestAzDOAgent]
     condition: and(always(), succeeded())
     variables:
       - group: Tools
@@ -10,7 +10,7 @@ jobs:
       - task: PowerShell@2
         inputs:
           pwsh: true
-          targetType: 'filePath'
+          targetType: filePath
           filePath: './jira-deployment/push-deployment-to-jira.ps1'
           arguments: >
             -pat '$(System.AccessToken)'
@@ -33,7 +33,7 @@ jobs:
       - task: PowerShell@2
         inputs:
           pwsh: true
-          targetType: 'filePath'
+          targetType: filePath
           filePath: './jira-deployment/push-deployment-to-jira.ps1'
           arguments: >
             -pat '$(System.AccessToken)'
@@ -47,7 +47,7 @@ jobs:
 
   - job: jiraDeploymentCanceled
     displayName: Push canceled deployment to Jira
-    dependsOn: ['deploy', 'RequestAzDOAgent']
+    dependsOn: [deploy, RequestAzDOAgent]
     condition: and(always(), canceled())
     variables:
       - group: Tools
@@ -56,7 +56,7 @@ jobs:
       - task: PowerShell@2
         inputs:
           pwsh: true
-          targetType: 'filePath'
+          targetType: filePath
           filePath: './jira-deployment/push-deployment-to-jira.ps1'
           arguments: >
             -pat '$(System.AccessToken)'

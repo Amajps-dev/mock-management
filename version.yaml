@@ -8,14 +8,14 @@ steps:
     displayName: Calculate version
     inputs:
       useConfigFile: True
-      configFilePath: 'gitversion.yml'
+      configFilePath: gitversion.yml
       # configFilePath: "./$(Build.Repository.Name)/gitversion.yml"
       # targetPath: './'
 
   - task: PowerShell@2
     displayName: Update version
     inputs:
-      targetType: 'inline'
+      targetType: inline
       script: |
         function AddXmlElement([string]$node, [string] $path, [string] $version) {
           $proj = [xml](Get-Content $path)

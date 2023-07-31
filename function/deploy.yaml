@@ -17,31 +17,31 @@ parameters:
 
 jobs:
   - job: deployFunction
-    displayName: 'Deploy function'
+    displayName: Deploy function
     steps:
-    - task: DownloadBuildArtifacts@1
-      displayName: Download application
-      inputs:
-        buildType: 'current'
-        downloadType: 'single'
-        artifactName: '$(Build.Repository.Name)'
-        downloadPath: '$(System.ArtifactsDirectory)'
+      - task: DownloadBuildArtifacts@1
+        displayName: Download application
+        inputs:
+          buildType: current
+          downloadType: single
+          artifactName: '$(Build.Repository.Name)'
+          downloadPath: '$(System.ArtifactsDirectory)'
 
-    - task: ArchiveFiles@2
-      inputs:
-        rootFolderOrFile: '$(System.ArtifactsDirectory)'
-        includeRootFolder: false
-        archiveType: 'zip'
-        archiveFile: '$(Pipeline.Workspace)/publish.zip'
-        replaceExistingArchive: true
+      - task: ArchiveFiles@2
+        inputs:
+          rootFolderOrFile: '$(System.ArtifactsDirectory)'
+          includeRootFolder: false
+          archiveType: zip
+          archiveFile: '$(Pipeline.Workspace)/publish.zip'
+          replaceExistingArchive: true
 
-    - task: AzureCLI@2
-      displayName: Deploy function
-      inputs:
-        azureSubscription: '${{ parameters.azureServiceConnection }}'
-        scriptType: 'pscore'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          az functionapp deployment source config-zip -g ${{ parameters.functionResourceGroup }} -n ${{ parameters.functionName }} --src publish.zip
-        workingDirectory: '$(Pipeline.Workspace)'
-        failOnStandardError: false
+      - task: AzureCLI@2
+        displayName: Deploy function
+        inputs:
+          azureSubscription: '${{ parameters.azureServiceConnection }}'
+          scriptType: pscore
+          scriptLocation: inlineScript
+          inlineScript: |
+            az functionapp deployment source config-zip -g ${{ parameters.functionResourceGroup }} -n ${{ parameters.functionName }} --src publish.zip
+          workingDirectory: '$(Pipeline.Workspace)'
+          failOnStandardError: false

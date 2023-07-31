@@ -16,21 +16,21 @@ jobs:
       - task: DotNetCoreCLI@2
         displayName: Restore
         inputs:
-          command: 'restore'
+          command: restore
           projects: '**/*.sln'
-          feedsToUse: 'select'
+          feedsToUse: select
           vstsFeed: 'a2fb6d3b-636e-4c41-8648-80aabf39e578'
-          verbosityRestore: 'Normal'
+          verbosityRestore: Normal
 
       - task: SonarQubePrepare@5
-        displayName: 'Prepare Analysis'
+        displayName: Prepare Analysis
         condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
         inputs:
-          SonarQube: 'SonarQube'
+          SonarQube: SonarQube
           projectKey: smarter-$(Build.Repository.Name)
           # projectName: '$(Build.Repository.Name)'
           projectVersion: '$(Build.BuildNumber)'
-          scannerMode: 'MSBuild'
+          scannerMode: MSBuild
           extraProperties: |
             sonar.cs.vscoveragexml.reportsPaths=$(Build.SourcesDirectory)/coverage.xml
 
@@ -45,21 +45,21 @@ jobs:
           dotnet new tool-manifest
           dotnet tool install dotnet-coverage --ignore-failed-sources
           dotnet tool run dotnet-coverage collect "dotnet test --no-restore --logger trx;LogFileName=test.xml" -f xml -o "coverage.xml"
-        displayName: 'Test'
+        displayName: Test
 
       - task: PublishTestResults@2
         inputs:
-          testResultsFormat: 'VSTest'
+          testResultsFormat: VSTest
           testResultsFiles: '**/test.xml'
           mergeTestResults: true
           testRunTitle: '$(Build.DefinitionName)-$(Build.BuildNumber)'
 
       - task: SonarQubeAnalyze@5
-        displayName: 'Run Code Analysis'
+        displayName: Run Code Analysis
         condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
 
       - task: SonarQubePublish@5
-        displayName: 'Publish Quality Gate Result'
+        displayName: Publish Quality Gate Result
         condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
         inputs:
           pollingTimeoutSec: '300'
@@ -68,7 +68,7 @@ jobs:
         displayName: SonarQube build breaker
         condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
         inputs:
-          SonarQube: 'SonarQube'
+          SonarQube: SonarQube
 
       - task: DotNetCoreCLI@2
         displayName: Publish
@@ -87,15 +87,15 @@ jobs:
 
       - publish: $(Build.BinariesDirectory)
         artifact: $(Build.Repository.Name)
-        displayName: 'Publish microservice artifact'
+        displayName: Publish microservice artifact
 
       - task: Docker@2
         displayName: Build and Push Docker image
         condition: and(eq('${{ parameters.pushToDocker }}', true), ne(variables['Build.Reason'], 'PullRequest'))
         inputs:
           buildContext: '$(Build.BinariesDirectory)'
-          containerRegistry: 'ContainerRegistry_MGMT'
+          containerRegistry: ContainerRegistry_MGMT
           repository: '$(Build.Repository.Name)'
-          command: 'buildAndPush'
+          command: buildAndPush
           Dockerfile: '**/Dockerfile'
           tags: '$(Build.BuildNumber)'

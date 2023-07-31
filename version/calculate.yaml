@@ -1,49 +1,49 @@
 steps:
-- task: gitversion/setup@0 
-  displayName: Install GitVersion 
-  inputs: 
-    versionSpec: "5.x"  
+  - task: gitversion/setup@0
+    displayName: Install GitVersion
+    inputs:
+      versionSpec: '5.x'
 
-- task: gitversion/execute@0 
-  displayName: Calculate version 
-  inputs: 
-    useConfigFile: True 
-    configFilePath: "gitversion.yml"
+  - task: gitversion/execute@0
+    displayName: Calculate version
+    inputs:
+      useConfigFile: True
+      configFilePath: gitversion.yml
 
-- task: PowerShell@2
-  displayName: Update version
-  inputs:
-    targetType: 'inline'
-    script: |
-      function AddXmlElement([string]$node, [string] $path, [string] $version) {
-        $proj = [xml](Get-Content $path)
+  - task: PowerShell@2
+    displayName: Update version
+    inputs:
+      targetType: inline
+      script: |
+        function AddXmlElement([string]$node, [string] $path, [string] $version) {
+          $proj = [xml](Get-Content $path)
 
-        if($proj.Project.PropertyGroup -is [array]){
-          $propertyGroup = $proj.Project.PropertyGroup[0]
-        }else{
-          $propertyGroup = $proj.Project.PropertyGroup
+          if($proj.Project.PropertyGroup -is [array]){
+            $propertyGroup = $proj.Project.PropertyGroup[0]
+          }else{
+            $propertyGroup = $proj.Project.PropertyGroup
+          }
+
+          if($null -ne $PropertyGroup[$node]) {
+            $propertyGroup.SelectNodes($node)[0].InnerText = $version
+          }else{
+            $child = $proj.CreateElement($node)
+            $child.innerXml = $version
+            $propertyGroup.AppendChild($child)
+          }
+
+          $proj.Save($path)
         }
 
-        if($null -ne $PropertyGroup[$node]) {
-          $propertyGroup.SelectNodes($node)[0].InnerText = $version
-        }else{
-          $child = $proj.CreateElement($node)
-          $child.innerXml = $version
-          $propertyGroup.AppendChild($child)
+        $assemblyVersion = "$(GitVersion.Major).$(GitVersion.Minor).$(GitVersion.Patch).$(GitVersion.CommitsSinceVersionSource)"
+
+        $projects = Get-ChildItem -Path $(Build.SourcesDirectory) -Filter *.csproj -Recurse
+
+        foreach ($project in $projects) {
+          AddXmlElement "Version" $project.FullName $assemblyVersion
+          AddXmlElement "AssemblyVersion" $project.FullName $assemblyVersion
+          AddXmlElement "FileVersion" $project.FullName $assemblyVersion
         }
 
-        $proj.Save($path)
-      }
-
-      $assemblyVersion = "$(GitVersion.Major).$(GitVersion.Minor).$(GitVersion.Patch).$(GitVersion.CommitsSinceVersionSource)"
-
-      $projects = Get-ChildItem -Path $(Build.SourcesDirectory) -Filter *.csproj -Recurse
-
-      foreach ($project in $projects) {
-        AddXmlElement "Version" $project.FullName $assemblyVersion
-        AddXmlElement "AssemblyVersion" $project.FullName $assemblyVersion
-        AddXmlElement "FileVersion" $project.FullName $assemblyVersion
-      }
-      
-      Write-Host "Release version is '$(GitVersion.SemVer)'."
-      Write-Host "##vso[build.updatebuildnumber]$(GitVersion.SemVer)"
+        Write-Host "Release version is '$(GitVersion.SemVer)'."
+        Write-Host "##vso[build.updatebuildnumber]$(GitVersion.SemVer)"

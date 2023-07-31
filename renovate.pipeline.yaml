@@ -1,6 +1,6 @@
 schedules:
   - cron: '0 0 * * *'
-    displayName: 'Every day at midnight'
+    displayName: Every day at midnight
     branches:
       include: [main]
     always: false
@@ -14,9 +14,9 @@ steps:
   - pwsh: |
       $pat = "$(System.AccessToken)"
       $base64AuthInfo= [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes(":$pat"))
-      $projectUrl = "https://dev.azure.com/edenred-emea-benefits/SmartER/_apis/git/repositories?api-version=6.1-preview.1" 
+      $projectUrl = "https://dev.azure.com/edenred-emea-benefits/SmartER/_apis/git/repositories?api-version=6.1-preview.1"
       $repos = (Invoke-RestMethod -Uri $projectUrl -Method Get -UseDefaultCredential -Headers @{Authorization=("Basic {0}" -f $base64AuthInfo)}).Value
-      $repos = $repos | Where-Object {$($_.name).StartsWith('xp') -or $($_.name).StartsWith('orch') -or $($_.name).StartsWith('dom')}  | Select-Object -Property name | Join-String -Property {"SmartER/$($_.name)"} -SingleQuote -Separator ', '
+      $repos = $repos | Where-Object {$($_.name).StartsWith('xp') -or $($_.name).StartsWith('orch') -or $($_.name).StartsWith('dom')} | Select-Object -Property name | Join-String -Property {"SmartER/$($_.name)"} -SingleQuote -Separator ', '
       Add-Content "$(System.DefaultWorkingDirectory)/renovate-config.js" -Value @"
       module.exports = {
         platform: 'azure',
@@ -86,7 +86,7 @@ steps:
       git config --global user.email 'renovate-bot@edenred.com'
       git config --global user.name 'Renovate Bot'
       npx renovate
-    displayName: 'Update dependencies using Renovate'
+    displayName: Update dependencies using Renovate
     env:
       TOKEN: $(System.AccessToken)
       GITHUB_COM_TOKEN: $(Renovate.GitHub.PAT)

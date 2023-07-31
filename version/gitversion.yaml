@@ -8,10 +8,10 @@ patch-version-bump-message: "^((build|chore|ci|docs|fix|perf|refactor|revert|sty
 branches:
   feature:
     regex: ^feature[\/]
-    tag: 'alpha'
+    tag: alpha
   main:
     regex: ^main$
-    tag: 'beta'
+    tag: beta
   release:
     regex: ^release[\/]
     tag: ''

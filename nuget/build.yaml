@@ -2,24 +2,24 @@ steps:
   - template: ../version.yaml
 
   - task: SonarQubePrepare@5
-    displayName: 'Prepare Analysis'
+    displayName: Prepare Analysis
     condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
     inputs:
-      SonarQube: 'SonarQube'
+      SonarQube: SonarQube
       projectKey: smarter-$(Build.Repository.Name)
       projectVersion: '$(Build.BuildNumber)'
-      scannerMode: 'MSBuild'
+      scannerMode: MSBuild
       extraProperties: |
         sonar.cs.vscoveragexml.reportsPaths=$(Build.SourcesDirectory)/coverage.xml
 
   - task: DotNetCoreCLI@2
     displayName: Restore
     inputs:
-      command: 'restore'
+      command: restore
       projects: '**/*.sln'
-      feedsToUse: 'select'
+      feedsToUse: select
       vstsFeed: 'a2fb6d3b-636e-4c41-8648-80aabf39e578'
-      verbosityRestore: 'Normal'
+      verbosityRestore: Normal
 
   - task: DotNetCoreCLI@2
     displayName: Build
@@ -34,14 +34,14 @@ steps:
       dotnet new tool-manifest
       dotnet tool install dotnet-coverage --ignore-failed-sources
       dotnet tool run dotnet-coverage collect "dotnet test --logger trx;LogFileName=test.xml" -f xml -o "coverage.xml"
-    displayName: 'Test'
+    displayName: Test
 
   - task: SonarQubeAnalyze@5
-    displayName: 'Run Code Analysis'
+    displayName: Run Code Analysis
     condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
 
   - task: SonarQubePublish@5
-    displayName: 'Publish Quality Gate Result'
+    displayName: Publish Quality Gate Result
     condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
     inputs:
       pollingTimeoutSec: '300'
@@ -50,7 +50,7 @@ steps:
     displayName: SonarQube build breaker
     condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
     inputs:
-      SonarQube: 'SonarQube'
+      SonarQube: SonarQube
 
   # - task: DotNetCoreCLI@2
   #   displayName: Pack
@@ -64,7 +64,7 @@ steps:
 
   - task: PublishSymbols@2
     condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
-    displayName: 'Publish symbols'
+    displayName: Publish symbols
     inputs:
       SymbolsFolder: '$(Build.ArtifactStagingDirectory)'
       SearchPattern: '**/*.pdb'
@@ -74,6 +74,6 @@ steps:
 
   - task: PublishBuildArtifacts@1
     condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
-    displayName: 'Publish Artifact'
+    displayName: Publish Artifact
     inputs:
-      ArtifactName: 'packages'
+      ArtifactName: packages

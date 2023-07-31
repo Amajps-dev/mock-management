@@ -5,11 +5,7 @@ parameters:
     type: string
   - name: tribe
     type: string
-    values:
-      - 'enabler'
-      - 'client'
-      - 'user'
-      - 'common'
+    values: [client, common, enabler, user]
   - name: functionResourceGroupDev
     type: string
   - name: functionNameDev
@@ -41,10 +37,10 @@ stages:
         parameters:
           functionResourceGroup: ${{ parameters.functionResourceGroupDev }}
           functionName: ${{ parameters.functionNameDev }}
-          pool: 'SmartER-dev'
-          environment: 'dev'
-          aspNetCoreEnvironment: 'Dev'
-          azureServiceConnection: 'Azure_DEV'
+          pool: SmartER-dev
+          environment: dev
+          aspNetCoreEnvironment: Dev
+          azureServiceConnection: Azure_DEV
 
   - stage: uat
     displayName: Deploy to UAT
@@ -59,10 +55,10 @@ stages:
         parameters:
           functionResourceGroup: ${{ parameters.functionResourceGroupUat }}
           functionName: ${{ parameters.functionNameUat }}
-          pool: 'SmartER-uat'
-          environment: 'uat'
-          aspNetCoreEnvironment: 'Uat'
-          azureServiceConnection: 'Azure_UAT'
+          pool: SmartER-uat
+          environment: uat
+          aspNetCoreEnvironment: Uat
+          azureServiceConnection: Azure_UAT
 
   - stage: prod
     displayName: Deploy to Prod
@@ -77,7 +73,7 @@ stages:
         parameters:
           functionResourceGroup: ${{ parameters.functionResourceGroupPrd }}
           functionName: ${{ parameters.functionNamePrd }}
-          pool: 'SmartER-prd'
-          environment: 'prd'
-          aspNetCoreEnvironment: 'Prd'
-          azureServiceConnection: 'Azure_PROD'
+          pool: SmartER-prd
+          environment: prd
+          aspNetCoreEnvironment: Prd
+          azureServiceConnection: Azure_PROD

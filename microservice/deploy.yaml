@@ -35,7 +35,7 @@ jobs:
       - task: PowerShell@2
         inputs:
           pwsh: true
-          targetType: 'filePath'
+          targetType: filePath
           filePath: './jira-deployment/push-deployment-to-jira.ps1'
           arguments: >
             -pat '$(System.AccessToken)'
@@ -51,11 +51,11 @@ jobs:
     parameters:
       azureServiceConnection: '${{ parameters.azureServiceConnection }}'
       environment: '${{ parameters.paasEnvironment }}'
-      entityCode: 'esm'
+      entityCode: esm
 
   - job: deploy
     displayName: Push to container registry
-    dependsOn: ['RequestAzDOAgent']
+    dependsOn: [RequestAzDOAgent]
     pool: '${{ parameters.pool }}'
     steps:
       - checkout: self
@@ -63,8 +63,8 @@ jobs:
 
       - template: steps/deploy/docker-pull-push.yml@pipeline-templates-paas2
         parameters:
-          azureServiceConnectionSrc: 'Azure_MGMT'
-          acrNameSrc: 'esmglobalinteg1acrm'
+          azureServiceConnectionSrc: Azure_MGMT
+          acrNameSrc: esmglobalinteg1acrm
           azureServiceConnectionDest: '${{ parameters.azureServiceConnection }}'
           acrNameDest: '${{ parameters.acrName }}'
           imageRepositoryName: '${{ parameters.microserviceName }}'

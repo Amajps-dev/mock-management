@@ -3,17 +3,10 @@ parameters:
     type: string
   - name: namespace
     type: string
-    values:
-      - frontend
-      - orchestration
-      - backend
+    values: [frontend, orchestration, backend]
   - name: tribe
     type: string
-    values:
-      - client
-      - enabler
-      - user
-      - shared
+    values: [client, enabler, user, shared]
   - name: jiraTestsId
     type: string
     default: ''
@@ -30,25 +23,25 @@ stages:
     variables:
       - name: publicUrl
         ${{ if eq( parameters['namespace'], 'frontend') }}:
-          value: 'dev2.smarter.edenred.io'
+          value: dev2.smarter.edenred.io
         ${{ else }}:
-          value: 'error'
+          value: error
     jobs:
       - deployment:
         environment: 'dev-${{ parameters.tribe }}'
       - template: ./deploy.yaml@pipelines
         parameters:
           microserviceName: '${{ parameters.microserviceName }}'
-          pool: 'SmartER-dev'
-          environment: 'dev'
-          aspNetCoreEnvironment: 'Dev'
+          pool: SmartER-dev
+          environment: dev
+          aspNetCoreEnvironment: Dev
           namespace: '${{ parameters.namespace }}'
-          azureServiceConnection: 'Azure_DEV'
-          acrName: 'esmappinteg1acrd'
-          paasEnvironment: 'dev'
-          aksResourceGroup: 'smarter-app-integ-dev-rg'
-          aksName: 'esm-app-integ-1-aks-d'
-          privateUrl: 'smarter-dev2.edenred.net'
+          azureServiceConnection: Azure_DEV
+          acrName: esmappinteg1acrd
+          paasEnvironment: dev
+          aksResourceGroup: smarter-app-integ-dev-rg
+          aksName: esm-app-integ-1-aks-d
+          privateUrl: smarter-dev2.edenred.net
           publicUrl: '${{ variables.publicUrl }}'
       - job: automatedtests
         displayName: Run automated tests
@@ -60,7 +53,7 @@ stages:
             displayName: 'Run Test - ${{ parameters.jiraTestsId }}'
             inputs:
               pwsh: true
-              targetType: 'filePath'
+              targetType: filePath
               filePath: './invoke-pipeline.ps1'
               arguments: >
                 -testplan '${{ parameters.jiraTestsId }}'
@@ -70,55 +63,55 @@ stages:
   - stage: uat
     displayName: Deploy to Uat
     condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
-    dependsOn: ['build']
+    dependsOn: [build]
     variables:
       - name: publicUrl
         ${{ if eq( parameters['namespace'], 'frontend') }}:
-          value: 'uat.smarter.edenred.io'
+          value: uat.smarter.edenred.io
         ${{ else }}:
-          value: 'error'
+          value: error
     jobs:
       - deployment:
         environment: 'uat-${{ parameters.tribe }}'
       - template: ./deploy.yaml@pipelines
         parameters:
           microserviceName: '${{ parameters.microserviceName }}'
-          pool: 'SmartER-uat'
-          environment: 'uat'
-          aspNetCoreEnvironment: 'Uat'
+          pool: SmartER-uat
+          environment: uat
+          aspNetCoreEnvironment: Uat
           namespace: '${{ parameters.namespace }}'
-          azureServiceConnection: 'Azure_UAT'
-          acrName: 'esmappinteg1acru'
-          paasEnvironment: 'UAT'
-          aksResourceGroup: 'smarter-app-integ-uat-rg'
-          aksName: 'esm-app-integ-1-aks-u'
-          privateUrl: 'smarter-uat.edenred.net'
+          azureServiceConnection: Azure_UAT
+          acrName: esmappinteg1acru
+          paasEnvironment: UAT
+          aksResourceGroup: smarter-app-integ-uat-rg
+          aksName: esm-app-integ-1-aks-u
+          privateUrl: smarter-uat.edenred.net
           publicUrl: '${{ variables.publicUrl }}'
 
   - stage: prd
     displayName: Deploy to Prod
     condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
-    dependsOn: ['build']
+    dependsOn: [build]
     variables:
       - name: publicUrl
         ${{ if eq( parameters['namespace'], 'frontend') }}:
-          value: 'prd.smarter.edenred.io'
+          value: prd.smarter.edenred.io
         ${{ else }}:
-          value: 'error'
+          value: error
     jobs:
       - deployment:
         environment: 'prd-${{ parameters.tribe }}'
       - template: ./deploy.yaml@pipelines
         parameters:
           microserviceName: '${{ parameters.microserviceName }}'
-          pool: 'SmartER-prd'
-          environment: 'prod'
-          aspNetCoreEnvironment: 'Production'
+          pool: SmartER-prd
+          environment: prod
+          aspNetCoreEnvironment: Production
           namespace: '${{ parameters.namespace }}'
-          azureServiceConnection: 'Azure_PROD'
-          acrName: 'esmappinteg1acrp'
-          paasEnvironment: 'PROD'
-          aksResourceGroup: 'smarter-app-integ-prd-rg'
-          aksName: 'esm-app-integ-1-aks-p'
-          privateUrl: 'smarter.edenred.net'
+          azureServiceConnection: Azure_PROD
+          acrName: esmappinteg1acrp
+          paasEnvironment: PROD
+          aksResourceGroup: smarter-app-integ-prd-rg
+          aksName: esm-app-integ-1-aks-p
+          privateUrl: smarter.edenred.net
           publicUrl: '${{ variables.publicUrl }}'

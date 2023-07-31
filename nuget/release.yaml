@@ -3,7 +3,7 @@ steps:
     artifact: packages
 
   - task: NuGetCommand@2
-    displayName: 'NuGet push'
+    displayName: NuGet push
     inputs:
       command: push
       packagesToPush: '$(Pipeline.Workspace)/packages/**/*.nupkg;!$(System.DefaultWorkingDirectory)/**/*.symbols.nupkg'

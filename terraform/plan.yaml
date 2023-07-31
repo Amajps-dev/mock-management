@@ -6,9 +6,9 @@ parameters:
 
 jobs:
   - job: plan
-    displayName: 'Plan'
+    displayName: Plan
     variables:
-      parametersFileName: 'variables.tfvars.json'
+      parametersFileName: variables.tfvars.json
     steps:
       - powershell: |
           $parameters = Get-Content "src/config/$(parametersFileName)" | ConvertFrom-Json
@@ -26,46 +26,46 @@ jobs:
           Get-Content src/config/$(parametersFileName)
 
       - task: FileTransform@1
-        displayName: 'Transform terraform parameters file'
+        displayName: Transform terraform parameters file
         inputs:
           folderPath: '$(System.DefaultWorkingDirectory)/src'
-          fileType: 'json'
+          fileType: json
           targetFiles: '**/${{ variables.parametersFileName }}'
 
       - script: |
           cat $(System.DefaultWorkingDirectory)/src/config/${{ variables.parametersFileName }}
-        displayName: 'Show terraform parameter file'
+        displayName: Show terraform parameter file
 
       - task: TerraformTaskV4@4
         displayName: Validate
         inputs:
-          provider: 'azurerm'
-          command: 'validate'
+          provider: azurerm
+          command: validate
 
       - task: TerraformTaskV3@3
-        displayName: 'Terraform init'
+        displayName: Terraform init
         inputs:
-          provider: 'azurerm'
-          command: 'init'
+          provider: azurerm
+          command: init
           workingDirectory: '$(System.DefaultWorkingDirectory)/src/terraform/'
-          backendAzureRmKey: 'datadog.tfstate'
-          backendAzureRmResourceGroupName: 'smarter-datadog-qualif-mgt-rg'
-          backendAzureRmStorageAccountName: 'esmsmarterdatadogqftfstm'
+          backendAzureRmKey: datadog.tfstate
+          backendAzureRmResourceGroupName: smarter-datadog-qualif-mgt-rg
+          backendAzureRmStorageAccountName: esmsmarterdatadogqftfstm
           backendServiceArm: '${{ parameters.azureServiceConnection }}'
-          backendAzureRmContainerName: 'tfstates'
-          deploymentMode: 'Incremental'
+          backendAzureRmContainerName: tfstates
+          deploymentMode: Incremental
 
       - task: TerraformTaskV3@3
-        displayName: 'Terraform plan'
+        displayName: Terraform plan
         inputs:
-          provider: 'azurerm'
-          command: 'plan'
+          provider: azurerm
+          command: plan
           workingDirectory: '$(System.DefaultWorkingDirectory)/src/terraform/'
           commandOptions: '-var-file="../config/${{ variables.parametersFileName }}" -out="$(Build.ArtifactStagingDirectory)/plan.tfplan" -input=false'
           environmentServiceNameAzureRM: '${{ parameters.azureServiceConnection }}'
 
       - publish: $(Build.ArtifactStagingDirectory)
-        displayName: 'Publish Artifact'
+        displayName: Publish Artifact
         condition: ne(variables['Build.Reason'], 'PullRequest')
         artifact: '${{ parameters.environment }}'
         continueOnError: false
