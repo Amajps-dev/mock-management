@@ -33,7 +33,7 @@ stages:
 
   - stage: dev
     displayName: Deploy to Dev
-    condition: or(and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main')), and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/feat')), and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+    condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/feat')))
     variables:
       - group: Tools
     jobs:
@@ -45,10 +45,11 @@ stages:
           environment: 'dev'
           aspNetCoreEnvironment: 'Dev'
           azureServiceConnection: 'Azure_DEV'
-          
+
   - stage: uat
     displayName: Deploy to UAT
     condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+    dependsOn: [build]
     variables:
       - group: Tools
     jobs:
@@ -65,8 +66,8 @@ stages:
 
   - stage: prod
     displayName: Deploy to Prod
-    dependsOn: uat
-    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+    dependsOn: [build]
     variables:
       - group: Tools
     jobs:
