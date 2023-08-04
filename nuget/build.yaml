@@ -33,7 +33,9 @@ steps:
   - pwsh: |
       dotnet new tool-manifest
       dotnet tool install dotnet-coverage --ignore-failed-sources
-      dotnet tool run dotnet-coverage collect "dotnet test --logger trx;LogFileName=test.xml" -f xml -o "coverage.xml"
+      Get-ChildItem ./tests -Recurse -Filter *.csproj | ForEach-Object {
+        dotnet tool run dotnet-coverage collect "dotnet test $_.FullName --logger trx;LogFileName=test.xml" -f xml -o "coverage.xml"
+      }
     displayName: Test
 
   - task: SonarQubeAnalyze@5
