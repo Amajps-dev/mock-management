@@ -34,7 +34,7 @@ steps:
       dotnet new tool-manifest
       dotnet tool install dotnet-coverage --ignore-failed-sources
       Get-ChildItem ./tests -Recurse -Filter *.csproj | ForEach-Object {
-        dotnet tool run dotnet-coverage collect "dotnet test $_.FullName --logger trx;LogFileName=test.xml" -f xml -o "coverage.xml"
+        dotnet tool run dotnet-coverage collect "dotnet test $_ --logger trx;LogFileName=test.xml" -f xml -o "coverage.xml"
       }
     displayName: Test
 
