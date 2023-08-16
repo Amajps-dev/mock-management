@@ -88,10 +88,37 @@ stages:
           privateUrl: smarter-uat.edenred.net
           publicUrl: '${{ variables.publicUrl }}'
 
-  - stage: prd
-    displayName: Deploy to Prod
+  - stage: stg
+    displayName: Deploy to Staging
     condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
     dependsOn: [build]
+    variables:
+      - name: publicUrl
+        ${{ if eq( parameters['namespace'], 'frontend') }}:
+          value: stg.smarter.edenred.io
+        ${{ else }}:
+          value: error
+    jobs:
+      - deployment:
+        environment: 'stg-${{ parameters.tribe }}'
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          microserviceName: '${{ parameters.microserviceName }}'
+          pool: SmartER-stg
+          environment: staging
+          aspNetCoreEnvironment: Staging
+          namespace: '${{ parameters.namespace }}'
+          azureServiceConnection: Azure_STAGING
+          acrName: esmappinteg1acrg
+          paasEnvironment: STAGING
+          aksResourceGroup: smarter-app-integ-stg-rg
+          aksName: esm-app-integ-1-aks-g
+          privateUrl: smarter-stg.edenred.net
+          publicUrl: '${{ variables.publicUrl }}'
+
+  - stage: prd
+    displayName: Deploy to Production
+    dependsOn: [stg]
     variables:
       - name: publicUrl
         ${{ if eq( parameters['namespace'], 'frontend') }}:
