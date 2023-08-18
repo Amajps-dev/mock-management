@@ -24,7 +24,7 @@ stages:
   - ${{ each connectionString in parameters.connectionStrings }}:
       - stage: deployDev_${{ connectionString.tenant }}
         displayName: Deploy to Dev ${{ connectionString.tenant }}
-         condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/feat')))
+        condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/feat')))
         dependsOn: [build]
         jobs:
           - template: ./deploy.yaml@pipelines
