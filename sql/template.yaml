@@ -2,6 +2,9 @@ parameters:
   - name: allowDataLoss
     type: boolean
     default: false
+  - name: doNotAlterCDCObjects
+    type: boolean
+    default: true
   - name: connectionStrings
     type: object
     default: []
@@ -33,6 +36,7 @@ stages:
               pool: SmartER-dev
               keyVaultName: esm-app-integ-1-kv-d
               allowDataLoss: ${{ parameters.allowDataLoss }}
+              doNotAlterCDCObjects: ${{ parameters.doNotAlterCDCObjects }}
 
       - stage: deployUat_${{ connectionString.tenant }}
         displayName: Deploy to Uat ${{ connectionString.tenant }}
@@ -50,6 +54,7 @@ stages:
               pool: SmartER-uat
               keyVaultName: esm-app-integ-1-kv-u
               allowDataLoss: ${{ parameters.allowDataLoss }}
+              doNotAlterCDCObjects: ${{ parameters.doNotAlterCDCObjects }}
 
       - stage: deployProd_${{ connectionString.tenant }}
         displayName: Deploy to Prod ${{ connectionString.tenant }}
@@ -67,3 +72,4 @@ stages:
               pool: SmartER-prd
               keyVaultName: esm-app-integ-1-kv-p
               allowDataLoss: ${{ parameters.allowDataLoss }}
+              doNotAlterCDCObjects: ${{ parameters.doNotAlterCDCObjects }}

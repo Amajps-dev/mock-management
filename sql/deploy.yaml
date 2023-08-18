@@ -14,6 +14,9 @@ parameters:
   - name: allowDataLoss
     type: boolean
     default: false
+  - name: doNotAlterCDCObjects
+    type: boolean
+    default: true
 
 jobs:
   - template: jobs/deploy/request-azdo-agent.yml@pipeline-templates-paas2
@@ -47,7 +50,10 @@ jobs:
           /TargetConnectionString:"$(${{ parameters.connectionStringName }})" `
           /v:Environment="$Env:Environment" `
           /p:BlockOnPossibleDataLoss="$(!([bool]$Env:AllowDataLoss))"
+          /p:ExcludeChangeDataCaptureObjects="$(([bool]$Env:DoNotAlterCDCObjects))"
+          /p:ExcludeReplicatedObjects="$(([bool]$Env:DoNotAlterCDCObjects))"
         displayName: Deploy SQL database
         env:
           Environment: ${{ parameters.environment }}
           AllowDataLoss: ${{ parameters.allowDataLoss }}
+          DoNotAlterCDCObjects: ${{ parameters.doNotAlterCDCObjects }}
