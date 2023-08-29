@@ -56,23 +56,23 @@ stages:
               allowDataLoss: ${{ parameters.allowDataLoss }}
               cdcManaged: ${{ parameters.cdcManaged }}
 
-      # - stage: deployStg_${{ connectionString.tenant }}
-      #   displayName: Deploy to Staging ${{ connectionString.tenant }}
-      #   condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
-      #   dependsOn: [build]
-      #   jobs:
-      #     - deployment:
-      #       environment: stg-${{ parameters.tribe }}
-      #     - template: ./deploy.yaml@pipelines
-      #       parameters:
-      #         connectionStringName: '${{ connectionString.stg }}'
-      #         azureServiceConnection: Azure_STG
-      #         environment: stg
-      #         paasEnvironment: STG
-      #         pool: SmartER-stg
-      #         keyVaultName: esm-app-integ-1-kv-g
-      #         allowDataLoss: ${{ parameters.allowDataLoss }}
-      #         cdcManaged: ${{ parameters.cdcManaged }}
+      - stage: deployStg_${{ connectionString.tenant }}
+        displayName: Deploy to Staging ${{ connectionString.tenant }}
+        condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+        dependsOn: [build]
+        jobs:
+          - deployment:
+            environment: stg-${{ parameters.tribe }}
+          - template: ./deploy.yaml@pipelines
+            parameters:
+              connectionStringName: '${{ connectionString.stg }}'
+              azureServiceConnection: Azure_STAGING
+              environment: stg
+              paasEnvironment: STAGING
+              pool: SmartER-stg
+              keyVaultName: esm-app-integ-1-kv-g
+              allowDataLoss: ${{ parameters.allowDataLoss }}
+              cdcManaged: ${{ parameters.cdcManaged }}
 
       - stage: deployProd_${{ connectionString.tenant }}
         displayName: Deploy to Prod ${{ connectionString.tenant }}
