@@ -21,6 +21,7 @@ stages:
     displayName: Deploy to Dev
     condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/feat')))
     variables:
+      - group: Tools
       - name: publicUrl
         ${{ if eq( parameters['namespace'], 'frontend') }}:
           value: dev2.smarter.edenred.io
@@ -46,19 +47,20 @@ stages:
       - job: automatedtests
         displayName: Run automated tests
         dependsOn: deploy
-        condition: and(succeeded(), ne('${{ parameters.jiraTestsId }}', ''))
         steps:
           - checkout: pipelines
           - task: PowerShell@2
-            displayName: 'Run Test - ${{ parameters.jiraTestsId }}'
+            displayName: 'Run automated tests'
             inputs:
               pwsh: true
-              targetType: filePath
-              filePath: './invoke-pipeline.ps1'
+              targetType: 'filePath'
+              filePath: './microservice/runFunctionalTests.ps1'
               arguments: >
-                -testplan '${{ parameters.jiraTestsId }}'
-                -pat '$(System.AccessToken)'
-                -environment 'development'
+                -microservicename '${{ parameters.microserviceName }}'
+                -azureDevOpsPat '$(System.AccessToken)'
+                -env 'development'
+                -build '$(Build.BuildNumber)'
+                -jiraBasicAuth '$(Jira.BasicAuth)'
 
   - stage: uat
     displayName: Deploy to Uat
