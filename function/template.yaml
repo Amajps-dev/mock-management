@@ -14,6 +14,10 @@ parameters:
     type: string
   - name: functionNameUat
     type: string
+  - name: functionResourceGroupStg
+    type: string
+  - name: functionNameStg
+    type: string
   - name: functionResourceGroupPrd
     type: string
   - name: functionNamePrd
@@ -59,6 +63,24 @@ stages:
           environment: uat
           aspNetCoreEnvironment: Uat
           azureServiceConnection: Azure_UAT
+
+  - stage: staging
+    displayName: Deploy to Staging
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+    dependsOn: [build]
+    variables:
+      - group: Tools
+    jobs:
+      - deployment:
+        environment: 'stg-${{ parameters.tribe }}'
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          functionResourceGroup: ${{ parameters.functionResourceGroupStg }}
+          functionName: ${{ parameters.functionNameStg }}
+          pool: SmartER-stg
+          environment: staging
+          aspNetCoreEnvironment: Staging
+          azureServiceConnection: Azure_STAGING
 
   - stage: prod
     displayName: Deploy to Prod
