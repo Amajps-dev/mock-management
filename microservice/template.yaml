@@ -16,6 +16,9 @@ stages:
     displayName: Build
     jobs:
       - template: ./build.yaml@pipelines
+        parameters:
+          tribe: '${{ parameters.tribe }}'
+          microserviceName: '${{ parameters.microserviceName }}'
 
   - stage: dev
     displayName: Deploy to Dev

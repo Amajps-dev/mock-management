@@ -2,10 +2,17 @@ parameters:
   - name: pushToDocker
     type: boolean
     default: true
+  - name: tribe
+    type: string
+    values: [client, enabler, user, shared]
+  - name: microserviceName
+    type: string
 
 jobs:
   - job: build
     displayName: Build
+    variables:
+      - group: Tools
     steps:
       - checkout: self
         fetchDepth: 0 # https://github.com/GitTools/actions/blob/main/docs/examples/azure/gitversion/execute/usage-examples.md
@@ -53,6 +60,12 @@ jobs:
           testResultsFiles: '**/test.xml'
           mergeTestResults: true
           testRunTitle: '$(Build.DefinitionName)-$(Build.BuildNumber)'
+
+      - template: ../specflow/synchronize.yaml@pipelines
+        parameters:
+          tribe: '${{ parameters.tribe }}'
+          microserviceName: '${{ parameters.microserviceName }}'
+          basePath: 'tests'
 
       - task: SonarQubeAnalyze@5
         displayName: Run Code Analysis

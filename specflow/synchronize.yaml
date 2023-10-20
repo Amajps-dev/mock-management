@@ -1,0 +1,185 @@
+parameters:
+  - name: tribe
+    type: string
+    values: [client, enabler, user, shared]
+  - name: microserviceName
+    type: string
+  - name: basePath
+    type: string
+
+steps:
+  - task: PowerShell@2
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    displayName: Publish SpecFlow scenarios to XRay
+    inputs:
+      targetType: inline
+      script: |
+        $xrayClient_id = '$(Xray.ClientId)'
+        $xrayClient_secret = '$(Xray.ClientSecret)'       
+        $tribeName = '${{ parameters.tribe }}'
+        $microserviceName = '${{ parameters.microserviceName }}'
+        $basePath = '${{ parameters.basePath }}'
+                
+        $xrayUrl = "https://xray.cloud.getxray.app/"
+        $descriptionObject = "This test is an integration test that is automated during the application build pipeline. Application cannot be built if the test fails so the test can be considered as passed for any deployed artifact. Test Scenario is automatically updated after each successfull build."
+
+        # Path to save the feature files zip archive
+        $featureDirectories=Get-ChildItem -Include *.feature -Recurse  $basePath | Select-Object -Unique Directory -ExpandProperty Directory
+
+        # Validate mandatory parameters
+        $mandatoryParams = @('xrayClient_id', 'xrayClient_secret', 'tribeName', 'microServiceName')
+
+        foreach ($param in $mandatoryParams) {
+          if ([string]::IsNullOrEmpty((Get-Variable -Name $param -ValueOnly))) {
+            Write-Error "Mandatory parameter $param is missing or empty"
+            exit
+          }
+        }
+
+        # Project Key (eg. LTT)
+        $projectKey = 'LTT'
+        switch ($tribeName) {
+          'client' { $projectKey = 'LCT' }
+          'user' { $projectKey = 'LUT' }
+          'enabler' { $projectKey = 'LOT' }
+          'shared' { $projectKey = 'LCT' }
+          }
+        Write-Host "Project Key is: $projectKey"
+
+        # Create testInfo and precondInfo files
+        function Create-InfoJSON {
+          $serializedDescription = $descriptionObject | ConvertTo-Json -Depth 1
+          
+          $info = @{
+            fields = @{
+              project = @{ key = $projectKey }
+              description = $serializedDescription
+              labels = @("SpecFlow")
+              customfield_10813 = @{ value = "Component" }
+              customfield_10814 = @{
+              value = "API"
+              child = @{ value = $microServiceName }
+              }
+            }
+          }
+          return $info | ConvertTo-Json -Depth 3
+        }
+
+        # Retry function
+        function Invoke-RestMethodWithRetry($method, $url, $headers, $body, $isMultiPart=$false) {
+          # Define retry parameters
+          $maxRetryCount = 5
+          $retryInterval = 3  # seconds
+          
+          $retryCount = 0
+          while ($true) {
+            try {
+              $retryCount++
+              # Prepare Body Content
+              if ($isMultiPart) {
+                $fileContent = [System.Net.Http.ByteArrayContent][System.IO.File]::ReadAllBytes($body.featureFilesZipPath)
+                $testInfoContent = [System.Net.Http.ByteArrayContent][System.Text.Encoding]::UTF8.GetBytes((Get-Content "$($body.featureFilesPath)/testInfo.json" -Raw))
+                $precondInfoContent = [System.Net.Http.ByteArrayContent][System.Text.Encoding]::UTF8.GetBytes((Get-Content "$($body.featureFilesPath)/precondInfo.json" -Raw))
+                
+                $form = [System.Net.Http.MultipartFormDataContent]::new()
+                $form.Add($fileContent, "file", [System.IO.Path]::GetFileName($body.featureFilesZipPath))
+                $form.Add($testInfoContent, "testInfo", "$($body.featureFilesPath)/testInfo.json")
+                $form.Add($precondInfoContent, "precondInfo", "$($body.featureFilesPath)/precondInfo.json")
+                
+                $response = Invoke-RestMethod -Uri $url -Method $method -Headers $headers -Body $form
+              } else {
+                $response = Invoke-RestMethod -Uri $url -Method $method -Headers $headers -Body $body
+              }
+              
+              return $response
+            }
+            catch {
+              if ($retryCount -ge $maxRetryCount) {
+                Write-Error "Max retries reached. An error occurred: $_"
+                return $null
+              } else {
+                Write-Warning "Attempt $retryCount of $maxRetryCount failed. Waiting $retryInterval seconds before retrying..."
+                Write-Host "Error Details: $($_.Exception.Message)"
+                Start-Sleep -Seconds $retryInterval
+              }
+            }
+          }
+        }
+
+        # Send the request to get the Xray token
+        $xrayTokenHeaders = @{
+          "Content-Type" = "application/json"
+        }
+        $xrayTokenBody = @{
+          "client_id" = "$xrayClient_id"
+          "client_secret" = "$xrayClient_secret"
+        } | ConvertTo-Json
+        $tokenUrl = "$xrayUrl/api/v2/authenticate"
+        $xrayTokenResponse = Invoke-RestMethodWithRetry -method "POST" -url $tokenUrl -headers $xrayTokenHeaders -body $xrayTokenBody
+        $token = $xrayTokenResponse
+
+        # Check if the token is retrieved correctly
+        if (!$token)
+        {
+          Write-Host "Failed to retrieve token"
+          exit
+        }
+        else
+        {
+          Write-Host "Xray token retrieved.`n"
+        }
+
+        # Send the request to upload the tests
+        $uploadTestHeaders = @{
+          "Authorization" = "Bearer $token"
+        }
+
+        $url = "$xrayUrl/api/v2/import/feature?projectKey=$projectKey"
+        Write-Host "Starting tests upload...`n"
+
+        foreach ($featureFilesPath in $featureDirectories)
+        {
+          # Zip the feature files
+          $featureFilesZipPath = "$featureFilesPath/featureFiles.zip"
+          Compress-Archive -Force -Path ("$featureFilesPath/*") -DestinationPath $featureFilesZipPath
+
+          $testInfoJson = Create-InfoJSON
+          $testInfoJson | Set-Content -Path "$featureFilesPath/testInfo.json"
+          $precondInfoJson = Create-InfoJSON
+          $precondInfoJson | Set-Content -Path "$featureFilesPath/precondInfo.json"
+          
+          $multipartData = @{
+            "featureFilesZipPath" = $featureFilesZipPath
+            "featureFilesPath" = $featureFilesPath
+          }
+          $response = Invoke-RestMethodWithRetry -method "Post" -url $url -headers $uploadTestHeaders -body $multipartData -isMultiPart $true
+          
+          # Clean up generated files
+          $files = @("$featureFilesPath/testInfo.json", "$featureFilesPath/precondInfo.json", "$featureFilesPath/featureFiles.zip")
+          Write-Host "Cleanup temporary files:"
+          foreach ($file in $files)
+          {
+            if (Test-Path $file)
+            {
+              Remove-Item $file
+              Write-Host "Deleted $file"
+            }
+            else
+            {
+              Write-Host "File not found: $file"
+            }
+          }
+
+          # Check if the upload was successful
+          if (!$response)
+          {
+            Write-Error "Failed to upload tests`n"
+            exit
+          }
+          else
+          {
+            Write-Host "Tests successfully uploaded:"
+            $response | ConvertTo-Json -Depth 10 | Write-Host
+            Write-Host
+          }
+        }
