@@ -1,0 +1,42 @@
+steps:
+  - task: NuGetAuthenticate@1
+
+  - task: PowerShell@2
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    displayName: Generate SpecFlow Living Documentation
+    inputs:
+      targetType: inline
+      script: |
+        dotnet tool install SpecFlow.Plus.LivingDoc.CLI
+
+        # Locate all build directories of modules that have a TestExecution.json file
+        $testExecutionDirectories=Get-ChildItem -Include TestExecution.json -Recurse tests | Select-Object -Unique Directory -ExpandProperty Directory
+
+        # constants for module identification
+        $startPattern = "/tests/"
+        $endPattern = "/bin/"
+
+        foreach ($testDirectory in $testExecutionDirectories)
+        {
+          # identify module name
+          # Find the index of the start and end patterns
+          $startIndex = "$testDirectory".IndexOf("$startPattern") + $startPattern.Length
+          $endIndex = "$testDirectory".IndexOf("$endPattern")
+          
+          # Extract dll module name
+          $moduleName = "$testDirectory".Substring($startIndex, $endIndex - $startIndex)
+          
+          # Generate report
+          Write-Output "Generating Living Documentation for $moduleName"
+          dotnet tool run livingdoc test-assembly $testDirectory/$moduleName.dll -t $testDirectory/TestExecution.json --output LivingDoc/LivingDoc.html
+          
+          # Mark Living documentation tests reports as to be published
+          Write-Output "##vso[task.setvariable variable=LivingDocumentationExists]true"
+        }
+
+  - task: PublishHtmlReport@1
+    condition: eq(variables.LivingDocumentationExists, 'true')
+    displayName: 'Publish Living Documentations reports'
+    inputs:
+      reportDir: 'LivingDoc/LivingDoc.html'
+      tabName: 'SpecFlow Tests reports'

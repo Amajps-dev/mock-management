@@ -23,7 +23,7 @@ steps:
         $xrayUrl = "https://xray.cloud.getxray.app/"
         $descriptionObject = "This test is an integration test that is automated during the application build pipeline. Application cannot be built if the test fails so the test can be considered as passed for any deployed artifact. Test Scenario is automatically updated after each successfull build."
 
-        # Path to save the feature files zip archive
+        # Identify all directories containing .feature test scenarii
         $featureDirectories=Get-ChildItem -Include *.feature -Recurse  $basePath | Select-Object -Unique Directory -ExpandProperty Directory
 
         # Validate mandatory parameters

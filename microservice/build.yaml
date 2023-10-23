@@ -61,6 +61,8 @@ jobs:
           mergeTestResults: true
           testRunTitle: '$(Build.DefinitionName)-$(Build.BuildNumber)'
 
+      - template: ../specflow/documentation.yaml@pipelines
+
       - template: ../specflow/synchronize.yaml@pipelines
         parameters:
           tribe: '${{ parameters.tribe }}'

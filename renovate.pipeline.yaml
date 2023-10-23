@@ -1,9 +1,9 @@
 # schedules:
-  # - cron: '0 0 * * *'
-  #   displayName: Every day at midnight
-  #   branches:
-  #     include: [main]
-  #   always: false
+# - cron: '0 0 * * *'
+#   displayName: Every day at midnight
+#   branches:
+#     include: [main]
+#   always: false
 
 trigger: none
 
