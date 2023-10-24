@@ -30,6 +30,8 @@ stages:
       - template: ../microservice/build.yaml@pipelines
         parameters:
           pushToDocker: false
+          tribe: '${{ parameters.tribe }}'
+          microserviceName: '${{ parameters.microserviceName }}'
 
   - stage: dev
     displayName: Deploy to Dev

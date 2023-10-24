@@ -1,7 +1,7 @@
 parameters:
   - name: tribe
     type: string
-    values: [client, enabler, user, shared]
+    values: [client, enabler, user, nfr, shared]
   - name: microserviceName
     type: string
   - name: basePath
@@ -42,6 +42,7 @@ steps:
           'client' { $projectKey = 'LCT' }
           'user' { $projectKey = 'LUT' }
           'enabler' { $projectKey = 'LOT' }
+          'nfr' { $projectKey = 'LTT' }
           'shared' { $projectKey = 'LCT' }
           }
         Write-Host "Project Key is: $projectKey"
