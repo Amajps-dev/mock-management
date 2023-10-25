@@ -6,7 +6,7 @@ parameters:
     values: [frontend, orchestration, backend]
   - name: tribe
     type: string
-    values: [client, enabler, user, nfr, shared]
+    values: [client, enabler, user, nfr, common, shared]
   - name: jiraTestsId
     type: string
     default: ''

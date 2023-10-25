@@ -5,7 +5,7 @@ parameters:
     type: string
   - name: tribe
     type: string
-    values: [client, common, enabler, user]
+    values: [client, enabler, user, nfr, common, shared]
   - name: functionResourceGroupDev
     type: string
   - name: functionNameDev
