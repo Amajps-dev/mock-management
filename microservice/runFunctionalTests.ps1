@@ -27,7 +27,7 @@ $headersAzureDevOps = @{ Authorization = "Basic $base64AuthInfo" }
 
 # Define headers
 $headers = @{
-    Authorization = $jiraBasicAuth
+    Authorization = "Basic $jiraBasicAuth"
     ContentType = "application/json"
 }
 
