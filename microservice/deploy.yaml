@@ -118,6 +118,7 @@ jobs:
           git push origin $tag
         displayName: Git tag
         condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+        workingDirectory: $(Build.Repository.Name)
 
   - template: ../jira-deployment/jira-deployment.yaml@pipelines
     parameters:
