@@ -18,6 +18,8 @@ jobs:
         fetchDepth: 0 # https://github.com/GitTools/actions/blob/main/docs/examples/azure/gitversion/execute/usage-examples.md
         fetchTags: false
 
+      - task: NuGetAuthenticate@1
+
       - template: ../version/calculate.yaml@pipelines
 
       - task: DotNetCoreCLI@2
