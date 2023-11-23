@@ -8,6 +8,7 @@ parameters:
       - 'enabler'
       - 'client'
       - 'user'
+      - 'merchant'
 
 stages:
   - stage: version

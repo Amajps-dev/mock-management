@@ -4,7 +4,7 @@ parameters:
     default: true
   - name: tribe
     type: string
-    values: [client, enabler, user, shared]
+    values: [client, enabler, user, shared, merchant]
   - name: microserviceName
     type: string
 
