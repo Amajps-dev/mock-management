@@ -37,11 +37,12 @@ jobs:
         inputs:
           SonarQube: SonarQube
           projectKey: smarter-$(Build.Repository.Name)
-          # projectName: '$(Build.Repository.Name)'
           projectVersion: '$(Build.BuildNumber)'
           scannerMode: MSBuild
           extraProperties: |
             sonar.cs.vscoveragexml.reportsPaths=$(Build.SourcesDirectory)/coverage.xml
+
+      - template: sass-build-template.yaml
 
       - task: DotNetCoreCLI@2
         displayName: Build
@@ -52,7 +53,7 @@ jobs:
 
       - pwsh: |
           dotnet new tool-manifest
-          dotnet tool install dotnet-coverage --ignore-failed-sources
+          dotnet tool install dotnet-coverage --version 17.8.6 --ignore-failed-sources
           dotnet tool run dotnet-coverage collect "dotnet test --no-restore --logger trx;LogFileName=test.xml" -f xml -o "coverage.xml"
         displayName: Test
 
@@ -96,6 +97,7 @@ jobs:
           projects: |
             **/*.Api.csproj
             **/*.Worker.csproj
+            **/*.View.csproj
             !**/*.Test.csproj
             !**/*.Tests.csproj
           arguments: '--no-build --nologo -c Release -o $(Build.BinariesDirectory)'

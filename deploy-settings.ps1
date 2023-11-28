@@ -24,7 +24,6 @@ try
             $_.Key
             $setting = $settings.PSObject.Properties[$_.Key]
             $setting
-
             if($setting -eq $null)
             {
                 az appconfig kv delete --endpoint $appConfigurationUrl --auth-mode login --key $_.Key --label $microservice -y --output none

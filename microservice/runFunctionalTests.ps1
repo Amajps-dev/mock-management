@@ -62,6 +62,7 @@ function Get-DataFromApi($url) {
 Write-Host "Searching for filter with name: $filterName"
 $filterUrl = "$jiraUrl/rest/api/3/filter/search?maxResults=50&filterName=$filterName&startAt=0"
 $filterResponse = Get-DataFromApi $filterUrl
+
 if ($filterResponse -eq $null) { return }
 if ($filterResponse.values.Count -eq 0) {
     Write-Warning "No filter found with the name: $filterName"

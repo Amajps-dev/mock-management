@@ -26,10 +26,13 @@ parameters:
     default: ''
   - name: appConfigurationName
     type: string
+  - name: dependsOn
+    type: object
 
 jobs:
   - job: inProgressJiraDeployment
     displayName: Set deployment in progress in Jira
+    dependsOn: ${{ parameters.dependsOn }}
     variables:
       - group: Tools
     steps:
@@ -57,8 +60,10 @@ jobs:
 
   - job: deploy
     displayName: Push to container registry
-    dependsOn: [RequestAzDOAgent]
-    pool: '${{ parameters.pool }}'
+    dependsOn: [RequestAzDOAgent, inProgressJiraDeployment]
+    pool:
+      name: '${{ parameters.pool }}'
+
     steps:
       - checkout: self
         persistCredentials: true
@@ -73,7 +78,7 @@ jobs:
           imageRepositoryName: '${{ parameters.microserviceName }}'
 
       - powershell: |
-          $content = (Get-Content ./manifest.yaml)
+          $content = (Get-Content "./manifest.yaml")
           $content = $content.replace('#{microserviceName}#', '${{ parameters.microserviceName }}')
           $content = $content.replace('#{environment}#', '${{ parameters.environment }}')
           $content = $content.replace('#{microserviceVersion}#', '$(Build.BuildNumber)')
@@ -117,7 +122,7 @@ jobs:
           git tag $tag
           git push origin $tag
         displayName: Git tag
-        condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
         workingDirectory: $(Build.Repository.Name)
 
   - template: ../jira-deployment/jira-deployment.yaml@pipelines

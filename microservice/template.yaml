@@ -22,7 +22,7 @@ stages:
 
   - stage: dev
     displayName: Deploy to Dev
-    condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/feat')))
+    condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), startsWith(variables['Build.SourceBranch'], 'refs/heads/feat')))
     variables:
       - group: Tools
       - name: publicUrl
@@ -35,6 +35,7 @@ stages:
         environment: 'dev-${{ parameters.tribe }}'
       - template: ./deploy.yaml@pipelines
         parameters:
+          dependsOn: ''
           microserviceName: '${{ parameters.microserviceName }}'
           pool: SmartER-dev
           environment: dev
@@ -48,7 +49,8 @@ stages:
           privateUrl: smarter-dev2.edenred.net
           publicUrl: '${{ variables.publicUrl }}'
           appConfigurationName: 'esm-app-integ-1-appconf-d'
-      - job: automatedtests
+
+      - job: runAutomatedTests
         displayName: Run automated tests
         dependsOn: deploy
         steps:
@@ -58,19 +60,22 @@ stages:
             inputs:
               pwsh: true
               targetType: 'filePath'
-              filePath: './microservice/runFunctionalTests.ps1'
+              filePath: './microservice/triggerFunctionalTestsAndValidateStatus.ps1'
               arguments: >
                 -microservicename '${{ parameters.microserviceName }}'
                 -azureDevOpsPat '$(System.AccessToken)'
                 -env 'development'
                 -build '$(Build.BuildNumber)'
                 -jiraBasicAuth '$(Jira.BasicAuth)'
+                -xrayClientId '$(Xray.ClientId)'
+                -xrayClientSecret '$(Xray.ClientSecret)'
 
   - stage: uat
     displayName: Deploy to Uat
     condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
     dependsOn: [build]
     variables:
+      - group: Tools
       - name: publicUrl
         ${{ if eq( parameters['namespace'], 'frontend') }}:
           value: uat.smarter.edenred.io
@@ -79,8 +84,29 @@ stages:
     jobs:
       - deployment:
         environment: 'uat-${{ parameters.tribe }}'
+      - job: checkAutomatedTests
+        displayName: Check automated tests status
+        steps:
+          - checkout: pipelines
+          - task: PowerShell@2
+            displayName: 'Check automated tests status in dev'
+            inputs:
+              pwsh: true
+              targetType: 'filePath'
+              filePath: './microservice/getFunctionalTestsStatus.ps1'
+              arguments: >
+                -microservicename '${{ parameters.microserviceName }}'
+                -env 'development'
+                -buildNumber '$(Build.BuildNumber)'
+                -jiraBasicAuth '$(Jira.BasicAuth)'
+                -xrayClientId '$(Xray.ClientId)'
+                -xrayClientSecret '$(Xray.ClientSecret)'
+                -buildDefinitionId '$(System.DefinitionId)'
+                -azureDevOpsPat '$(System.AccessToken)'
+                -buildSourceBranchName '$(Build.SourceBranch)'
       - template: ./deploy.yaml@pipelines
         parameters:
+          dependsOn: 'checkAutomatedTests'
           microserviceName: '${{ parameters.microserviceName }}'
           pool: SmartER-uat
           environment: uat
@@ -95,9 +121,27 @@ stages:
           publicUrl: '${{ variables.publicUrl }}'
           appConfigurationName: 'esm-app-integ-1-appconf-u'
 
+      - job: runAutomatedTests
+        displayName: Run automated tests
+        dependsOn: deploy
+        steps:
+          - checkout: pipelines
+          - task: PowerShell@2
+            displayName: 'Run automated tests'
+            inputs:
+              pwsh: true
+              targetType: 'filePath'
+              filePath: './microservice/runFunctionalTests.ps1'
+              arguments: >
+                -microservicename '${{ parameters.microserviceName }}'
+                -azureDevOpsPat '$(System.AccessToken)'
+                -env 'uat'
+                -build '$(Build.BuildNumber)'
+                -jiraBasicAuth '$(Jira.BasicAuth)'
+
   - stage: stg
     displayName: Deploy to Staging
-    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     dependsOn: [build]
     variables:
       - name: publicUrl
@@ -110,6 +154,7 @@ stages:
         environment: 'stg-${{ parameters.tribe }}'
       - template: ./deploy.yaml@pipelines
         parameters:
+          dependsOn: ''
           microserviceName: '${{ parameters.microserviceName }}'
           pool: SmartER-stg
           environment: staging
@@ -126,6 +171,7 @@ stages:
 
   - stage: prd
     displayName: Deploy to Production
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     dependsOn: [stg]
     variables:
       - name: publicUrl
@@ -138,6 +184,7 @@ stages:
         environment: 'prd-${{ parameters.tribe }}'
       - template: ./deploy.yaml@pipelines
         parameters:
+          dependsOn: ''
           microserviceName: '${{ parameters.microserviceName }}'
           pool: SmartER-prd
           environment: prod
