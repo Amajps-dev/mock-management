@@ -21,7 +21,7 @@
             "key": "value",
             "key2": "value2"
           },
-          "authentication": "developer"
+          "authentication": "internal_token"
         },
         "filter": [
           {
