@@ -1,36 +1,54 @@
 {
-    "authentications": [
+  "authentications": [
       {
-        "name": "developer",
-        "type": "dom-security",
-        "parameters": {
-          "clientId": "developers",
-          "clientSecret": "e0194196-5e4a-4044-b050-d1e869522764",
-          "tokenURL": "https://smarter-dev2.edenred.net/dom-security-api/v1/connect/login"
-        }
-      }
-    ],
-    "mocks": [
-      {
-        "file": "Stubs/dom-client-api/v1/clients/12345/GET/payload.json",
-        "headers": ["Content-Disposition", "Header2"],
-        "target": {
-          "url": "http://....dom-client-api/v1/clients/12345",
-          "method": "GET",
-          "headers": {
-            "key": "value",
-            "key2": "value2"
-          },
-          "authentication": "internal_token"
-        },
-        "filter": [
-          {
-            "path": "data.oneForceAccount.oneforceAccountOneforceId",
-            "value": "\"___OneforceAccountOneforceId___\""
+          "name": "developer",
+          "type": "dom-security",
+          "parameters": {
+              "clientId": "developers",
+              "clientSecret": "e0194196-5e4a-4044-b050-d1e869522764",
+              "tokenURL": "https://smarter-dev2.edenred.net/dom-security-api/v1/connect/login"
           }
-        ]
+      },
+      {
+          "name": "unleash",
+          "type": "token",
+          "value": "*:development.55d89b4c3afb4c9c93857aec78b98c6b410863bacece86893858d294"
       }
-      
-    ]
-  }
+  ],
+  "mocks": [
+      {
+          "file": "Stubs/edge/api/client/features/GET/payload.json",
+          "target": {
+              "url": "https://dev2.smarter.edenred.io/edge/api/client/features?appName=client&environment=dev&os=web&tenant=fr",
+              "method": "GET",
+              "headers": {
+                  "Origin": "client-app-dev2.smarter.edenred.io"
+              },
+              "authentication": "unleash"
+          }
+      },
+      {
+          "file": "Stubs/dom-client-api/v1/clients/12345/GET/payload.json",
+          "headers": [
+              "Content-Disposition",
+              "Header2"
+          ],
+          "target": {
+              "url": "http://....dom-client-api/v1/clients/12345",
+              "method": "GET",
+              "headers": {
+                  "key": "value",
+                  "key2": "value2"
+              },
+              "authentication": "internal_token"
+          },
+          "filter": [
+              {
+                  "path": "data.oneForceAccount.oneforceAccountOneforceId",
+                  "value": "\"___OneforceAccountOneforceId___\""
+              }
+          ]
+      }
+  ]
+}
   
