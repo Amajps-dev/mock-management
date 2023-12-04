@@ -1,0 +1,28 @@
+steps:
+  - script: |
+      echo "Checking for 'build-sass' script in package.json..."
+      if jq -e '.scripts["build-sass"]' package.json; then
+        echo "##vso[task.setvariable variable=RunSassBuild]true"
+      else
+        echo "##vso[task.setvariable variable=RunSassBuild]false"
+      fi
+    displayName: 'Check for build-sass script in package.json'
+
+  - task: NodeTool@0
+    displayName: 'Use Node 20'
+    condition: and(succeeded(), eq(variables['RunSassBuild'], 'true'))
+    inputs:
+      versionSpec: '20.x'
+
+  - task: Npm@1
+    displayName: 'Npm install'
+    condition: and(succeeded(), eq(variables['RunSassBuild'], 'true'))
+    inputs:
+      command: install
+
+  - task: Npm@1
+    displayName: Build CSS from SASS
+    condition: and(succeeded(), eq(variables['RunSassBuild'], 'true'))
+    inputs:
+      command: 'custom'
+      customCommand: 'run build-sass'

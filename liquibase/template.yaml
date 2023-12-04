@@ -1,0 +1,161 @@
+parameters:
+  - name: databases
+    type: object
+    default: []
+  - name: tribe
+    type: string
+    values:
+      - 'enabler'
+      - 'client'
+      - 'user'
+      - 'merchant'
+
+stages:
+  - stage: version
+    displayName: Calculate version
+    jobs:
+      - job:
+        steps:
+          - checkout: self
+            fetchDepth: 0 # https://github.com/GitTools/actions/blob/main/docs/examples/azure/gitversion/execute/usage-examples.md
+            fetchTags: false
+          - template: ../version/calculate.yaml@pipelines
+
+  # - stage: validate
+  #   displayName: Validate
+  #   dependsOn: version
+  #   jobs:
+  #   - template: ./validate.yaml@pipelines
+  #     parameters:
+  #       connectionStringName: '${{ database.dev }}'
+  #       tenant: ${{ database.tenant }}
+  #       azureServiceConnection: 'Azure_DEV'
+  #       environment: 'dev'
+  #       paasEnvironment: 'DEV'
+  #       pool: 'SmartER-dev'
+  #       keyVaultName: 'esm-app-integ-1-kv-d'
+
+  - ${{ each database in parameters.databases }}:
+      - stage: planDev_${{ database.tenant }}
+        displayName: Plan Dev ${{ database.tenant }}
+        dependsOn: version
+        condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), startsWith(variables['Build.SourceBranch'], 'refs/heads/feat'))
+        jobs:
+          - template: ./plan.yaml@pipelines
+            parameters:
+              connectionStringName: '${{ database.dev }}'
+              tenant: ${{ database.tenant }}
+              azureServiceConnection: 'Azure_DEV'
+              environment: 'dev'
+              paasEnvironment: 'DEV'
+              pool: 'SmartER-dev'
+              keyVaultName: 'esm-app-integ-1-kv-d'
+
+      - stage: deployDev_${{ database.tenant }}
+        displayName: 'Deploy to Dev ${{ database.tenant }}'
+        dependsOn: planDev_${{ database.tenant }}
+        jobs:
+          - deployment:
+            environment: 'dev-sql-${{ parameters.tribe }}'
+          - template: ./deploy.yaml@pipelines
+            parameters:
+              connectionStringName: '${{ database.dev }}'
+              tenant: ${{ database.tenant }}
+              azureServiceConnection: 'Azure_DEV'
+              environment: 'dev'
+              paasEnvironment: 'DEV'
+              pool: 'SmartER-dev'
+              keyVaultName: 'esm-app-integ-1-kv-d'
+
+      - stage: planUat_${{ database.tenant }}
+        displayName: Plan Uat ${{ database.tenant }}
+        condition: startsWith(variables['Build.SourceBranch'], 'refs/heads/release')
+        dependsOn: version
+        jobs:
+          - template: ./plan.yaml@pipelines
+            parameters:
+              connectionStringName: '${{ database.uat }}'
+              tenant: ${{ database.tenant }}
+              azureServiceConnection: 'Azure_UAT'
+              environment: 'uat'
+              paasEnvironment: 'UAT'
+              pool: 'SmartER-uat'
+              keyVaultName: 'esm-app-integ-1-kv-u'
+
+      - stage: deployUat_${{ database.tenant }}
+        displayName: 'Deploy to Uat ${{ database.tenant }}'
+        dependsOn: planUat_${{ database.tenant }}
+        jobs:
+          - deployment:
+            environment: 'uat-${{ parameters.tribe }}'
+          - template: ./deploy.yaml@pipelines
+            parameters:
+              connectionStringName: '${{ database.uat }}'
+              tenant: ${{ database.tenant }}
+              azureServiceConnection: 'Azure_UAT'
+              environment: 'uat'
+              paasEnvironment: 'UAT'
+              pool: 'SmartER-uat'
+              keyVaultName: 'esm-app-integ-1-kv-u'
+
+      - stage: planStg_${{ database.tenant }}
+        displayName: Plan Stg ${{ database.tenant }}
+        dependsOn: version
+        condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/main'))
+        jobs:
+          - template: ./plan.yaml@pipelines
+            parameters:
+              connectionStringName: '${{ database.stg }}'
+              tenant: ${{ database.tenant }}
+              azureServiceConnection: 'Azure_STAGING'
+              environment: 'stg'
+              paasEnvironment: 'STAGING'
+              pool: 'SmartER-stg'
+              keyVaultName: 'esm-app-integ-1-kv-g'
+
+      - stage: deployStg_${{ database.tenant }}
+        displayName: 'Deploy to Stg ${{ database.tenant }}'
+        dependsOn: planStg_${{ database.tenant }}
+        jobs:
+          - deployment:
+            environment: 'stg-${{ parameters.tribe }}'
+          - template: ./deploy.yaml@pipelines
+            parameters:
+              connectionStringName: '${{ database.stg }}'
+              tenant: ${{ database.tenant }}
+              azureServiceConnection: 'Azure_STAGING'
+              environment: 'stg'
+              paasEnvironment: 'STAGING'
+              pool: 'SmartER-stg'
+              keyVaultName: 'esm-app-integ-1-kv-g'
+
+      - stage: planProd_${{ database.tenant }}
+        displayName: Plan Prod ${{ database.tenant }}
+        dependsOn: deployStg_${{ database.tenant }}
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+        jobs:
+          - template: ./plan.yaml@pipelines
+            parameters:
+              connectionStringName: '${{ database.prd }}'
+              tenant: ${{ database.tenant }}
+              azureServiceConnection: 'Azure_PROD'
+              environment: 'prod'
+              paasEnvironment: 'PROD'
+              pool: 'SmartER-prd'
+              keyVaultName: 'esm-app-integ-1-kv-p'
+
+      - stage: deployProd_${{ database.tenant }}
+        displayName: 'Deploy to Prod ${{ database.tenant }}'
+        dependsOn: planProd_${{ database.tenant }}
+        jobs:
+          - deployment:
+            environment: 'prd-${{ parameters.tribe }}'
+          - template: ./deploy.yaml@pipelines
+            parameters:
+              connectionStringName: '${{ database.prd }}'
+              tenant: ${{ database.tenant }}
+              azureServiceConnection: 'Azure_PROD'
+              environment: 'prod'
+              paasEnvironment: 'PROD'
+              pool: 'SmartER-prd'
+              keyVaultName: 'esm-app-integ-1-kv-p'

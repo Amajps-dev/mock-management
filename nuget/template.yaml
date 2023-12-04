@@ -1,0 +1,17 @@
+stages:
+  - stage: Build
+    displayName: Build
+    jobs:
+      - job: Build
+        displayName: Build
+        steps:
+          - template: build.yaml
+
+  - stage: Release
+    displayName: Release
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - job: Release
+        displayName: Release
+        steps:
+          - template: release.yaml

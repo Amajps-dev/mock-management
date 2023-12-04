@@ -1,0 +1,81 @@
+steps:
+  - template: ../version.yaml
+
+  - task: SonarQubePrepare@5
+    displayName: Prepare Analysis
+    condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+    inputs:
+      SonarQube: SonarQube
+      projectKey: smarter-$(Build.Repository.Name)
+      projectVersion: '$(Build.BuildNumber)'
+      scannerMode: MSBuild
+      extraProperties: |
+        sonar.cs.vscoveragexml.reportsPaths=$(Build.SourcesDirectory)/coverage.xml
+
+  - task: DotNetCoreCLI@2
+    displayName: Restore
+    inputs:
+      command: restore
+      projects: '**/*.sln'
+      feedsToUse: select
+      vstsFeed: 'a2fb6d3b-636e-4c41-8648-80aabf39e578'
+      verbosityRestore: Normal
+
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      command: build
+      projects: '**/*.sln'
+      arguments: '--nologo --no-restore -c Release --output $(Build.ArtifactStagingDirectory)'
+
+  - task: NuGetAuthenticate@1
+
+  - pwsh: |
+      dotnet new tool-manifest
+      dotnet tool install dotnet-coverage --version 17.8.6 --ignore-failed-sources
+      Get-ChildItem ./tests -Recurse -Filter *.csproj | ForEach-Object {
+        dotnet tool run dotnet-coverage collect "dotnet test $_ --logger trx;LogFileName=test.xml" -f xml -o "coverage.xml"
+      }
+    displayName: Test
+
+  - task: SonarQubeAnalyze@5
+    displayName: Run Code Analysis
+    condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+
+  - task: SonarQubePublish@5
+    displayName: Publish Quality Gate Result
+    condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+    inputs:
+      pollingTimeoutSec: '300'
+
+  - task: sonar-buildbreaker@8
+    displayName: SonarQube build breaker
+    condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+    inputs:
+      SonarQube: SonarQube
+
+  # - task: DotNetCoreCLI@2
+  #   displayName: Pack
+  #   condition: succeeded()
+  #   inputs:
+  #     command: pack
+  #     projects: |
+  #       src/**/*.csproj
+  #     arguments: '-p:PackageVersion=$(Build.BuildNumber) -o $(Build.ArtifactStagingDirectory) --include-symbols --verbosity normal'
+  #     verbosityPack: Normal
+
+  - task: PublishSymbols@2
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    displayName: Publish symbols
+    inputs:
+      SymbolsFolder: '$(Build.ArtifactStagingDirectory)'
+      SearchPattern: '**/*.pdb'
+      SymbolServerType: teamServices
+      TreatNotIndexedAsWarning: true
+      SymbolsArtifactName: 'Symbols_$(Build.BuildId)-$(Build.BuildNumber)'
+
+  - task: PublishBuildArtifacts@1
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    displayName: Publish Artifact
+    inputs:
+      ArtifactName: packages

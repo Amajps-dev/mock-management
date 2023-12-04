@@ -1,0 +1,59 @@
+parameters:
+  - name: connectionStringName
+    type: string
+  - name: azureServiceConnection
+    type: string
+  - name: environment
+    type: string
+  - name: paasEnvironment
+    type: string
+  - name: pool
+    type: string
+  - name: keyVaultName
+    type: string
+  - name: allowDataLoss
+    type: boolean
+    default: false
+  - name: cdcManaged
+    type: boolean
+    default: false
+
+jobs:
+  - template: jobs/deploy/request-azdo-agent.yml@pipeline-templates-paas2
+    parameters:
+      azureServiceConnection: '${{ parameters.azureServiceConnection }}'
+      environment: '${{ parameters.paasEnvironment }}'
+      entityCode: esm
+
+  - job:
+    pool: '${{ parameters.pool }}'
+    steps:
+      - task: DownloadBuildArtifacts@1
+        displayName: Download artifact
+        inputs:
+          buildType: current
+          downloadType: single
+          artifactName: '$(Build.Repository.Name)'
+          downloadPath: '$(System.ArtifactsDirectory)'
+
+      - task: AzureKeyVault@2
+        displayName: Get connection string from key vault
+        inputs:
+          azureSubscription: '${{ parameters.azureServiceConnection }}'
+          KeyVaultName: '${{ parameters.keyVaultName }}'
+          SecretsFilter: '${{ parameters.connectionStringName }}'
+
+      - pwsh: |
+          dotnet new tool-manifest
+          dotnet tool install microsoft.sqlpackage
+          dotnet tool run sqlpackage /Action:Publish /SourceFile:$(System.ArtifactsDirectory)/$(Build.Repository.Name)/$(Build.Repository.Name).dacpac `
+          /TargetConnectionString:"$(${{ parameters.connectionStringName }})" `
+          /v:Environment="$Env:Environment" `
+          /p:BlockOnPossibleDataLoss="$(!([bool]$Env:AllowDataLoss))" `
+          /p:DoNotAlterChangeDataCaptureObjects="$(!([bool]$Env:CdcManaged))" `
+          /p:DoNotAlterReplicatedObjects="$(!([bool]$Env:CdcManaged))"
+        displayName: Deploy SQL database
+        env:
+          Environment: ${{ parameters.environment }}
+          AllowDataLoss: ${{ parameters.allowDataLoss }}
+          CdcManaged: ${{ parameters.cdcManaged }}

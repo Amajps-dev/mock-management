@@ -1,0 +1,41 @@
+parameters:
+  - name: environment
+    type: string
+  - name: azureServiceConnection
+    type: string
+
+jobs:
+  - job: apply
+    displayName: Apply
+    variables:
+      parametersFileName: variables.tfvars.json
+    steps:
+      - task: DownloadBuildArtifacts@1
+        displayName: Download application
+        inputs:
+          buildType: current
+          downloadType: single
+          artifactName: '${{ parameters.environment }}'
+          downloadPath: '$(System.DefaultWorkingDirectory)/src/terraform/'
+
+      - task: TerraformTaskV3@3
+        displayName: Terraform init
+        inputs:
+          provider: azurerm
+          command: init
+          workingDirectory: '$(System.DefaultWorkingDirectory)/src/terraform/'
+          backendAzureRmKey: datadog.tfstate
+          backendAzureRmResourceGroupName: smarter-datadog-qualif-mgt-rg
+          backendAzureRmStorageAccountName: esmsmarterdatadogqftfstm
+          backendServiceArm: '${{ parameters.azureServiceConnection }}'
+          backendAzureRmContainerName: tfstates
+          deploymentMode: Incremental
+
+      - task: TerraformTaskV3@3
+        displayName: "Terraform apply 'plan.tfplan'"
+        inputs:
+          provider: azurerm
+          command: apply
+          workingDirectory: '$(System.DefaultWorkingDirectory)/src/terraform/'
+          commandOptions: '"plan.tfplan"'
+          environmentServiceNameAzureRM: '${{ parameters.azureServiceConnection }}'

@@ -1,0 +1,200 @@
+parameters:
+  - name: microserviceName
+    type: string
+  - name: namespace
+    type: string
+    values: [frontend, orchestration, backend]
+  - name: tribe
+    type: string
+    values: [client, enabler, user, nfr, common, shared, merchant]
+  - name: jiraTestsId
+    type: string
+    default: ''
+
+stages:
+  - stage: build
+    displayName: Build
+    jobs:
+      - template: ./build.yaml@pipelines
+        parameters:
+          tribe: '${{ parameters.tribe }}'
+          microserviceName: '${{ parameters.microserviceName }}'
+
+  - stage: dev
+    displayName: Deploy to Dev
+    condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), startsWith(variables['Build.SourceBranch'], 'refs/heads/feat')))
+    variables:
+      - group: Tools
+      - name: publicUrl
+        ${{ if eq( parameters['namespace'], 'frontend') }}:
+          value: dev2.smarter.edenred.io
+        ${{ else }}:
+          value: error
+    jobs:
+      - deployment:
+        environment: 'dev-${{ parameters.tribe }}'
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          dependsOn: ''
+          microserviceName: '${{ parameters.microserviceName }}'
+          pool: SmartER-dev
+          environment: dev
+          aspNetCoreEnvironment: Dev
+          namespace: '${{ parameters.namespace }}'
+          azureServiceConnection: Azure_DEV
+          acrName: esmappinteg1acrd
+          paasEnvironment: dev
+          aksResourceGroup: smarter-app-integ-dev-rg
+          aksName: esm-app-integ-1-aks-d
+          privateUrl: smarter-dev2.edenred.net
+          publicUrl: '${{ variables.publicUrl }}'
+          appConfigurationName: 'esm-app-integ-1-appconf-d'
+
+      - job: runAutomatedTests
+        displayName: Run automated tests
+        dependsOn: deploy
+        steps:
+          - checkout: pipelines
+          - task: PowerShell@2
+            displayName: 'Run automated tests'
+            inputs:
+              pwsh: true
+              targetType: 'filePath'
+              filePath: './microservice/triggerFunctionalTestsAndValidateStatus.ps1'
+              arguments: >
+                -microservicename '${{ parameters.microserviceName }}'
+                -azureDevOpsPat '$(System.AccessToken)'
+                -env 'development'
+                -build '$(Build.BuildNumber)'
+                -jiraBasicAuth '$(Jira.BasicAuth)'
+                -xrayClientId '$(Xray.ClientId)'
+                -xrayClientSecret '$(Xray.ClientSecret)'
+
+  - stage: uat
+    displayName: Deploy to Uat
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+    dependsOn: [build]
+    variables:
+      - group: Tools
+      - name: publicUrl
+        ${{ if eq( parameters['namespace'], 'frontend') }}:
+          value: uat.smarter.edenred.io
+        ${{ else }}:
+          value: error
+    jobs:
+      - deployment:
+        environment: 'uat-${{ parameters.tribe }}'
+      - job: checkAutomatedTests
+        displayName: Check automated tests status
+        steps:
+          - checkout: pipelines
+          - task: PowerShell@2
+            displayName: 'Check automated tests status in dev'
+            inputs:
+              pwsh: true
+              targetType: 'filePath'
+              filePath: './microservice/getFunctionalTestsStatus.ps1'
+              arguments: >
+                -microservicename '${{ parameters.microserviceName }}'
+                -env 'development'
+                -buildNumber '$(Build.BuildNumber)'
+                -jiraBasicAuth '$(Jira.BasicAuth)'
+                -xrayClientId '$(Xray.ClientId)'
+                -xrayClientSecret '$(Xray.ClientSecret)'
+                -buildDefinitionId '$(System.DefinitionId)'
+                -azureDevOpsPat '$(System.AccessToken)'
+                -buildSourceBranchName '$(Build.SourceBranch)'
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          dependsOn: 'checkAutomatedTests'
+          microserviceName: '${{ parameters.microserviceName }}'
+          pool: SmartER-uat
+          environment: uat
+          aspNetCoreEnvironment: Uat
+          namespace: '${{ parameters.namespace }}'
+          azureServiceConnection: Azure_UAT
+          acrName: esmappinteg1acru
+          paasEnvironment: UAT
+          aksResourceGroup: smarter-app-integ-uat-rg
+          aksName: esm-app-integ-1-aks-u
+          privateUrl: smarter-uat.edenred.net
+          publicUrl: '${{ variables.publicUrl }}'
+          appConfigurationName: 'esm-app-integ-1-appconf-u'
+
+      - job: runAutomatedTests
+        displayName: Run automated tests
+        dependsOn: deploy
+        steps:
+          - checkout: pipelines
+          - task: PowerShell@2
+            displayName: 'Run automated tests'
+            inputs:
+              pwsh: true
+              targetType: 'filePath'
+              filePath: './microservice/runFunctionalTests.ps1'
+              arguments: >
+                -microservicename '${{ parameters.microserviceName }}'
+                -azureDevOpsPat '$(System.AccessToken)'
+                -env 'uat'
+                -build '$(Build.BuildNumber)'
+                -jiraBasicAuth '$(Jira.BasicAuth)'
+
+  - stage: stg
+    displayName: Deploy to Staging
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    dependsOn: [build]
+    variables:
+      - name: publicUrl
+        ${{ if eq( parameters['namespace'], 'frontend') }}:
+          value: stg.smarter.edenred.io
+        ${{ else }}:
+          value: error
+    jobs:
+      - deployment:
+        environment: 'stg-${{ parameters.tribe }}'
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          dependsOn: ''
+          microserviceName: '${{ parameters.microserviceName }}'
+          pool: SmartER-stg
+          environment: staging
+          aspNetCoreEnvironment: Staging
+          namespace: '${{ parameters.namespace }}'
+          azureServiceConnection: Azure_STAGING
+          acrName: esmappinteg1acrg
+          paasEnvironment: STAGING
+          aksResourceGroup: smarter-app-integ-stg-rg
+          aksName: esm-app-integ-1-aks-g
+          privateUrl: smarter-stg.edenred.net
+          publicUrl: '${{ variables.publicUrl }}'
+          appConfigurationName: 'esm-app-integ-1-appconf-g'
+
+  - stage: prd
+    displayName: Deploy to Production
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    dependsOn: [stg]
+    variables:
+      - name: publicUrl
+        ${{ if eq( parameters['namespace'], 'frontend') }}:
+          value: prd.smarter.edenred.io
+        ${{ else }}:
+          value: error
+    jobs:
+      - deployment:
+        environment: 'prd-${{ parameters.tribe }}'
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          dependsOn: ''
+          microserviceName: '${{ parameters.microserviceName }}'
+          pool: SmartER-prd
+          environment: prod
+          aspNetCoreEnvironment: Production
+          namespace: '${{ parameters.namespace }}'
+          azureServiceConnection: Azure_PROD
+          acrName: esmappinteg1acrp
+          paasEnvironment: PROD
+          aksResourceGroup: smarter-app-integ-prd-rg
+          aksName: esm-app-integ-1-aks-p
+          privateUrl: smarter.edenred.net
+          publicUrl: '${{ variables.publicUrl }}'
+          appConfigurationName: 'esm-app-integ-1-appconf-p'

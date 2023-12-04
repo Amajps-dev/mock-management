@@ -1,0 +1,69 @@
+jobs:
+  - job: jiraDeploymentSucceeded
+    displayName: Push succeeded deployment to Jira
+    dependsOn: [deploy, RequestAzDOAgent]
+    condition: and(always(), succeeded())
+    variables:
+      - group: Tools
+    steps:
+      - checkout: pipelines
+      - task: PowerShell@2
+        inputs:
+          pwsh: true
+          targetType: filePath
+          filePath: './jira-deployment/push-deployment-to-jira.ps1'
+          arguments: >
+            -pat '$(System.AccessToken)'
+            -jiraApiClientSecret '$(Jira.Api.ClientSecret)'
+            -environment '${{ parameters.environment }}'
+            -state 'Succeeded'
+            -buildId '$(Build.BuildId)'
+            -buildNumber '$(Build.BuildNumber)'
+            -buildDefinitionId '$(System.DefinitionId)'
+            -repositoryName '$(Build.Repository.Name)'
+
+  - job: jiraDeploymentFailed
+    displayName: Push failed deployment to Jira
+    dependsOn: ['deploy', 'RequestAzDOAgent']
+    condition: and(always(), failed())
+    variables:
+      - group: Tools
+    steps:
+      - checkout: pipelines
+      - task: PowerShell@2
+        inputs:
+          pwsh: true
+          targetType: filePath
+          filePath: './jira-deployment/push-deployment-to-jira.ps1'
+          arguments: >
+            -pat '$(System.AccessToken)'
+            -jiraApiClientSecret '$(Jira.Api.ClientSecret)'
+            -environment '${{ parameters.environment }}'
+            -state 'Failed'
+            -buildId '$(Build.BuildId)'
+            -buildNumber '$(Build.BuildNumber)'
+            -buildDefinitionId '$(System.DefinitionId)'
+            -repositoryName '$(Build.Repository.Name)'
+
+  - job: jiraDeploymentCanceled
+    displayName: Push canceled deployment to Jira
+    dependsOn: [deploy, RequestAzDOAgent]
+    condition: and(always(), canceled())
+    variables:
+      - group: Tools
+    steps:
+      - checkout: pipelines
+      - task: PowerShell@2
+        inputs:
+          pwsh: true
+          targetType: filePath
+          filePath: './jira-deployment/push-deployment-to-jira.ps1'
+          arguments: >
+            -pat '$(System.AccessToken)'
+            -jiraApiClientSecret '$(Jira.Api.ClientSecret)'
+            -environment '${{ parameters.environment }}'
+            -state 'Canceled'
+            -buildId '$(Build.BuildId)'
+            -buildNumber '$(Build.BuildNumber)'
+            -buildDefinitionId '$(System.DefinitionId)'
+            -repositoryName '$(Build.Repository.Name)'

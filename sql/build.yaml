@@ -1,0 +1,17 @@
+jobs:
+  - job:
+    steps:
+      - task: DotNetCoreCLI@2
+        displayName: Build dacpac
+        inputs:
+          command: build
+          projects: '**/*.sqlproj'
+          arguments: '/p:OutDir=$(Build.BinariesDirectory) /p:AssemblyName=$(Build.Repository.Name) /p:SqlTargetName=$(Build.Repository.Name)'
+
+      - task: PublishBuildArtifacts@1
+        displayName: Publish dacpac artifact
+        condition: ne(variables['Build.Reason'], 'PullRequest')
+        inputs:
+          PathtoPublish: '$(Build.BinariesDirectory)'
+          ArtifactName: $(Build.Repository.Name)
+          publishLocation: Container

@@ -1,0 +1,9 @@
+# Dir for bundles
+node_modules
+package-lock.json
+yarn.lock
+
+# IDE
+.idea/
+.vs/
+*.code-workspace

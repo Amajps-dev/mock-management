@@ -1,0 +1,103 @@
+parameters:
+  - name: microserviceName
+    type: string
+  - name: assemblyName
+    type: string
+  - name: tribe
+    type: string
+    values: [client, enabler, user, nfr, common, shared]
+  - name: functionResourceGroupDev
+    type: string
+  - name: functionNameDev
+    type: string
+  - name: functionResourceGroupUat
+    type: string
+  - name: functionNameUat
+    type: string
+  - name: functionResourceGroupStg
+    type: string
+  - name: functionNameStg
+    type: string
+  - name: functionResourceGroupPrd
+    type: string
+  - name: functionNamePrd
+    type: string
+
+stages:
+  - stage: build
+    displayName: Build
+    jobs:
+      - template: ../microservice/build.yaml@pipelines
+        parameters:
+          pushToDocker: false
+          tribe: '${{ parameters.tribe }}'
+          microserviceName: '${{ parameters.microserviceName }}'
+
+  - stage: dev
+    displayName: Deploy to Dev
+    condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/heads/feat')))
+    variables:
+      - group: Tools
+    jobs:
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          functionResourceGroup: ${{ parameters.functionResourceGroupDev }}
+          functionName: ${{ parameters.functionNameDev }}
+          pool: SmartER-dev
+          environment: dev
+          aspNetCoreEnvironment: Dev
+          azureServiceConnection: Azure_DEV
+
+  - stage: uat
+    displayName: Deploy to UAT
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+    dependsOn: [build]
+    variables:
+      - group: Tools
+    jobs:
+      - deployment:
+        environment: 'uat-${{ parameters.tribe }}'
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          functionResourceGroup: ${{ parameters.functionResourceGroupUat }}
+          functionName: ${{ parameters.functionNameUat }}
+          pool: SmartER-uat
+          environment: uat
+          aspNetCoreEnvironment: Uat
+          azureServiceConnection: Azure_UAT
+
+  - stage: staging
+    displayName: Deploy to Staging
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+    dependsOn: [build]
+    variables:
+      - group: Tools
+    jobs:
+      - deployment:
+        environment: 'stg-${{ parameters.tribe }}'
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          functionResourceGroup: ${{ parameters.functionResourceGroupStg }}
+          functionName: ${{ parameters.functionNameStg }}
+          pool: SmartER-stg
+          environment: staging
+          aspNetCoreEnvironment: Staging
+          azureServiceConnection: Azure_STAGING
+
+  - stage: prod
+    displayName: Deploy to Prod
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release'))
+    dependsOn: [build]
+    variables:
+      - group: Tools
+    jobs:
+      - deployment:
+        environment: 'prd-${{ parameters.tribe }}'
+      - template: ./deploy.yaml@pipelines
+        parameters:
+          functionResourceGroup: ${{ parameters.functionResourceGroupPrd }}
+          functionName: ${{ parameters.functionNamePrd }}
+          pool: SmartER-prd
+          environment: prd
+          aspNetCoreEnvironment: Prd
+          azureServiceConnection: Azure_PROD

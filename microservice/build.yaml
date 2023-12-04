@@ -1,0 +1,120 @@
+parameters:
+  - name: pushToDocker
+    type: boolean
+    default: true
+  - name: tribe
+    type: string
+    values: [client, enabler, user, shared, merchant]
+  - name: microserviceName
+    type: string
+
+jobs:
+  - job: build
+    displayName: Build
+    variables:
+      - group: Tools
+    steps:
+      - checkout: self
+        fetchDepth: 0 # https://github.com/GitTools/actions/blob/main/docs/examples/azure/gitversion/execute/usage-examples.md
+        fetchTags: false
+
+      - task: NuGetAuthenticate@1
+
+      - template: ../version/calculate.yaml@pipelines
+
+      - task: DotNetCoreCLI@2
+        displayName: Restore
+        inputs:
+          command: restore
+          projects: '**/*.sln'
+          feedsToUse: select
+          vstsFeed: 'a2fb6d3b-636e-4c41-8648-80aabf39e578'
+          verbosityRestore: Normal
+
+      - task: SonarQubePrepare@5
+        displayName: Prepare Analysis
+        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+        inputs:
+          SonarQube: SonarQube
+          projectKey: smarter-$(Build.Repository.Name)
+          projectVersion: '$(Build.BuildNumber)'
+          scannerMode: MSBuild
+          extraProperties: |
+            sonar.cs.vscoveragexml.reportsPaths=$(Build.SourcesDirectory)/coverage.xml
+
+      - template: sass-build-template.yaml
+
+      - task: DotNetCoreCLI@2
+        displayName: Build
+        inputs:
+          command: build
+          projects: '**/*.sln'
+          arguments: '--nologo --no-restore -c Release'
+
+      - pwsh: |
+          dotnet new tool-manifest
+          dotnet tool install dotnet-coverage --version 17.8.6 --ignore-failed-sources
+          dotnet tool run dotnet-coverage collect "dotnet test --no-restore --logger trx;LogFileName=test.xml" -f xml -o "coverage.xml"
+        displayName: Test
+
+      - task: PublishTestResults@2
+        inputs:
+          testResultsFormat: VSTest
+          testResultsFiles: '**/test.xml'
+          mergeTestResults: true
+          testRunTitle: '$(Build.DefinitionName)-$(Build.BuildNumber)'
+
+      - template: ../specflow/documentation.yaml@pipelines
+
+      - template: ../specflow/synchronize.yaml@pipelines
+        parameters:
+          tribe: '${{ parameters.tribe }}'
+          microserviceName: '${{ parameters.microserviceName }}'
+          basePath: 'tests'
+
+      - task: SonarQubeAnalyze@5
+        displayName: Run Code Analysis
+        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+
+      - task: SonarQubePublish@5
+        displayName: Publish Quality Gate Result
+        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+        inputs:
+          pollingTimeoutSec: '300'
+
+      - task: sonar-buildbreaker@8
+        displayName: SonarQube build breaker
+        condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release')))
+        inputs:
+          SonarQube: SonarQube
+
+      - task: DotNetCoreCLI@2
+        displayName: Publish
+        condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+        inputs:
+          command: publish
+          publishWebProjects: false
+          projects: |
+            **/*.Api.csproj
+            **/*.Worker.csproj
+            **/*.View.csproj
+            !**/*.Test.csproj
+            !**/*.Tests.csproj
+          arguments: '--no-build --nologo -c Release -o $(Build.BinariesDirectory)'
+          zipAfterPublish: false
+          modifyOutputPath: false
+
+      - publish: $(Build.BinariesDirectory)
+        artifact: $(Build.Repository.Name)
+        displayName: Publish microservice artifact
+
+      - task: Docker@2
+        displayName: Build and Push Docker image
+        condition: and(succeeded(), eq('${{ parameters.pushToDocker }}', true), ne(variables['Build.Reason'], 'PullRequest'))
+        inputs:
+          buildContext: '$(Build.BinariesDirectory)'
+          containerRegistry: ContainerRegistry_MGMT
+          repository: '$(Build.Repository.Name)'
+          command: buildAndPush
+          Dockerfile: '**/Dockerfile'
+          tags: '$(Build.BuildNumber)'

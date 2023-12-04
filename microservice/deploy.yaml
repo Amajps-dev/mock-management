@@ -1,0 +1,130 @@
+parameters:
+  - name: microserviceName
+    type: string
+  - name: pool
+    type: string
+  - name: environment
+    type: string
+  - name: paasEnvironment
+    type: string
+  - name: aspNetCoreEnvironment
+    type: string
+  - name: namespace
+    type: string
+  - name: azureServiceConnection
+    type: string
+  - name: acrName
+    type: string
+  - name: aksResourceGroup
+    type: string
+  - name: aksName
+    type: string
+  - name: privateUrl
+    type: string
+  - name: publicUrl
+    type: string
+    default: ''
+  - name: appConfigurationName
+    type: string
+  - name: dependsOn
+    type: object
+
+jobs:
+  - job: inProgressJiraDeployment
+    displayName: Set deployment in progress in Jira
+    dependsOn: ${{ parameters.dependsOn }}
+    variables:
+      - group: Tools
+    steps:
+      - checkout: pipelines
+      - task: PowerShell@2
+        inputs:
+          pwsh: true
+          targetType: filePath
+          filePath: './jira-deployment/push-deployment-to-jira.ps1'
+          arguments: >
+            -pat '$(System.AccessToken)'
+            -jiraApiClientSecret '$(Jira.Api.ClientSecret)'
+            -environment '${{ parameters.environment }}'
+            -state 'InProgress'
+            -buildId '$(Build.BuildId)'
+            -buildNumber '$(Build.BuildNumber)'
+            -buildDefinitionId '$(System.DefinitionId)'
+            -repositoryName '$(Build.Repository.Name)'
+
+  - template: jobs/deploy/request-azdo-agent.yml@pipeline-templates-paas2
+    parameters:
+      azureServiceConnection: '${{ parameters.azureServiceConnection }}'
+      environment: '${{ parameters.paasEnvironment }}'
+      entityCode: esm
+
+  - job: deploy
+    displayName: Push to container registry
+    dependsOn: [RequestAzDOAgent, inProgressJiraDeployment]
+    pool:
+      name: '${{ parameters.pool }}'
+
+    steps:
+      - checkout: self
+        persistCredentials: true
+      - checkout: pipelines
+
+      - template: steps/deploy/docker-pull-push.yml@pipeline-templates-paas2
+        parameters:
+          azureServiceConnectionSrc: Azure_MGMT
+          acrNameSrc: esmglobalinteg1acrm
+          azureServiceConnectionDest: '${{ parameters.azureServiceConnection }}'
+          acrNameDest: '${{ parameters.acrName }}'
+          imageRepositoryName: '${{ parameters.microserviceName }}'
+
+      - powershell: |
+          $content = (Get-Content "./manifest.yaml")
+          $content = $content.replace('#{microserviceName}#', '${{ parameters.microserviceName }}')
+          $content = $content.replace('#{environment}#', '${{ parameters.environment }}')
+          $content = $content.replace('#{microserviceVersion}#', '$(Build.BuildNumber)')
+          $commitHash = (git rev-parse --short HEAD)
+          $content = $content.replace('#{commitHash}#', $commitHash)
+          $content = $content.replace('#{acrName}#', '${{ parameters.acrName }}')
+          $content = $content.replace('#{namespace}#', '${{ parameters.namespace }}')
+          $content = $content.replace('#{AspNetCoreEnvironment}#', '${{ parameters.aspNetCoreEnvironment }}')
+          $content = $content.replace('#{privateUrl}#', '${{ parameters.privateUrl }}')
+          $content = $content.replace('#{publicUrl}#', '${{ parameters.publicUrl }}')
+          Set-Content -Path ./manifest.yaml -Value $content
+          Get-Content ./manifest.yaml
+        displayName: Replace manifest variables
+        workingDirectory: $(Build.Repository.Name)
+
+      - task: AzureCLI@2
+        displayName: Update settings and secrets
+        inputs:
+          azureSubscription: '${{ parameters.azureServiceConnection }}'
+          scriptType: pscore
+          scriptLocation: scriptPath
+          scriptPath: ./Pipelines/deploy-settings.ps1
+          workingDirectory: $(Build.Repository.Name)
+          arguments: >
+            -microservice '$(Build.Repository.Name)'
+            -environment '${{ parameters.environment }}'
+            -version '$(Build.BuildNumber)'
+            -appConfigurationName '${{ parameters.appConfigurationName }}'
+
+      - template: steps/deploy/kube-apply.yml@pipeline-templates-paas2
+        parameters:
+          azureServiceConnection: '${{ parameters.azureServiceConnection }}'
+          configFile: '$(Build.SourcesDirectory)/$(Build.Repository.Name)/manifest.yaml'
+          kubeRg: '${{ parameters.aksResourceGroup }}'
+          kubeName: '${{ parameters.aksName }}'
+
+      # Create a tag with an ISO UTC datetime
+      # ex: prod/19700101T000000Z-release-0.0
+      - script: |
+          tag=${{ parameters.environment }}/$(date -u +'%Y%m%dT%H%M%SZ')-release-$(Build.SourceBranchName)
+          git tag $tag
+          git push origin $tag
+        displayName: Git tag
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+        workingDirectory: $(Build.Repository.Name)
+
+  - template: ../jira-deployment/jira-deployment.yaml@pipelines
+    parameters:
+      environment: '${{ parameters.environment }}'

@@ -1,0 +1,78 @@
+parameters:
+  - name: tenant
+    type: string
+  - name: connectionStringName
+    type: string
+  - name: azureServiceConnection
+    type: string
+  - name: environment
+    type: string
+  - name: paasEnvironment
+    type: string
+  - name: pool
+    type: string
+  - name: keyVaultName
+    type: string
+
+jobs:
+  - template: jobs/deploy/request-azdo-agent.yml@pipeline-templates-paas2
+    parameters:
+      azureServiceConnection: '${{ parameters.azureServiceConnection }}'
+      environment: '${{ parameters.paasEnvironment }}'
+      entityCode: 'esm'
+
+  - job:
+    displayName: Plan
+    pool: '${{ parameters.pool }}'
+    steps:
+      - checkout: pipelines
+
+      - task: AzureKeyVault@2
+        displayName: 'Get connection string from key vault'
+        inputs:
+          azureSubscription: '${{ parameters.azureServiceConnection }}'
+          KeyVaultName: '${{ parameters.keyVaultName }}'
+          SecretsFilter: '${{ parameters.connectionStringName }}'
+
+      - task: PowerShell@2
+        displayName: 'Convert ADO to JDBC connectionString'
+        inputs:
+          pwsh: true
+          targetType: 'filePath'
+          filePath: './Pipelines/liquibase/convertTo-JdbcConnectionString.ps1'
+          arguments: >
+            -connectionString '$(${{ parameters.connectionStringName }})'
+
+      - checkout: self
+
+      - powershell: |
+          if("$(JdbcConnectionString)" -like "*mongo*"){
+            liquibase validate --changelog-file=./ChangeLog.xml --url "$(JdbcConnectionString)" --username="$(username)" --password="$(password)"
+          } else {
+            liquibase validate --changelog-file=./ChangeLog.xml --url "$(JdbcConnectionString)"
+          }
+        displayName: 'Validate ChangeLog'
+        workingDirectory: $(Build.Repository.Name)
+
+      - powershell: |
+          $tenant = "${{ parameters.tenant }}"
+          if ([string]::IsNullOrEmpty($tenant)) {
+              $filter = "global"
+          } else {
+              $filter = "global or $tenant"
+          }
+          if("$(JdbcConnectionString)" -like "*mongo*"){
+            liquibase status --changelog-file=./ChangeLog.xml --url "$(JdbcConnectionString)" --username="$(username)" --password="$(password)"
+          } else {
+            liquibase update-sql > $(Build.BinariesDirectory)/output.sql --changelog-file=./ChangeLog.xml --contexts=${{ parameters.environment }} --labelFilter=$filter --url "$(JdbcConnectionString)"
+          }
+        displayName: 'Plan ChangeLog'
+        workingDirectory: $(Build.Repository.Name)
+
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish sql output'
+        condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+        inputs:
+          PathtoPublish: '$(Build.BinariesDirectory)'
+          ArtifactName: '${{ parameters.environment }} ${{ parameters.tenant }}'
+          publishLocation: 'Container'

@@ -1,0 +1,76 @@
+parameters:
+  - name: environment
+    type: string
+  - name: azureServiceConnection
+    type: string
+
+jobs:
+  - job: plan
+    displayName: Plan
+    variables:
+      parametersFileName: variables.tfvars.json
+    steps:
+      - powershell: |
+          $parameters = Get-Content "src/config/$(parametersFileName)" | ConvertFrom-Json
+          Write-Host "##vso[task.setvariable variable=scope]$($parameters.scope)"
+          Write-Host "##vso[task.setvariable variable=projectName]$($parameters.projectName)"
+          Write-Host "##vso[task.setvariable variable=entityCode]$($parameters.entityCode)"
+          Write-Host "##vso[task.setvariable variable=env3]$($parameters.env3)"
+          Write-Host "##vso[task.setvariable variable=env1]$($parameters.env1)"
+          Write-Host "##vso[task.setvariable variable=customName]$($parameters.customName)"
+          $scopeShort = "$($parameters.scope)" -replace "-", ""
+          Write-Host "##vso[task.setvariable variable=scopeShort]$scopeShort"
+          $serviceLevel = '$(serviceLevel)'
+          $serviceLevelShort = "$($serviceLevel)".Substring(0,1)+"$($serviceLevel)".Substring("$($serviceLevel)".Length-1)
+          Write-Host "##vso[task.setvariable variable=serviceLevelShort]$serviceLevelShort"
+          Get-Content src/config/$(parametersFileName)
+
+      - task: FileTransform@1
+        displayName: Transform terraform parameters file
+        inputs:
+          folderPath: '$(System.DefaultWorkingDirectory)/src'
+          fileType: json
+          targetFiles: '**/${{ variables.parametersFileName }}'
+
+      - script: |
+          cat $(System.DefaultWorkingDirectory)/src/config/${{ variables.parametersFileName }}
+        displayName: Show terraform parameter file
+
+      - task: TerraformTaskV4@4
+        displayName: Validate
+        inputs:
+          provider: azurerm
+          command: validate
+
+      - task: TerraformTaskV3@3
+        displayName: Terraform init
+        inputs:
+          provider: azurerm
+          command: init
+          workingDirectory: '$(System.DefaultWorkingDirectory)/src/terraform/'
+          backendAzureRmKey: datadog.tfstate
+          backendAzureRmResourceGroupName: smarter-datadog-qualif-mgt-rg
+          backendAzureRmStorageAccountName: esmsmarterdatadogqftfstm
+          backendServiceArm: '${{ parameters.azureServiceConnection }}'
+          backendAzureRmContainerName: tfstates
+          deploymentMode: Incremental
+
+      - task: TerraformTaskV3@3
+        displayName: Terraform plan
+        inputs:
+          provider: azurerm
+          command: plan
+          workingDirectory: '$(System.DefaultWorkingDirectory)/src/terraform/'
+          commandOptions: '-var-file="../config/${{ variables.parametersFileName }}" -out="$(Build.ArtifactStagingDirectory)/plan.tfplan" -input=false'
+          environmentServiceNameAzureRM: '${{ parameters.azureServiceConnection }}'
+
+      - publish: $(Build.ArtifactStagingDirectory)
+        displayName: Publish Artifact
+        condition: ne(variables['Build.Reason'], 'PullRequest')
+        artifact: '${{ parameters.environment }}'
+        continueOnError: false
+
+    # - task: TerraformOutput@1
+    #   inputs:
+    #     outputFilePath: '$(Build.ArtifactStagingDirectory)/plan.tfplan'
+    #     artifactName: '${{ parameters.environment }}'
