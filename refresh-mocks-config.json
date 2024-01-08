@@ -1,5 +1,5 @@
 {
-  "authentications": [
+"authentications": [
     {
       "name": "unleash",
       "type": "token",
@@ -13,15 +13,20 @@
   "mocks": [
     {
       "file": "Stubs/edge/api/client/features/GET/payload.json",
-      "headers": ["Access-Control-Allow-Origin", "Content-Encoding", "Content-Type"],
+      "headers": [
+        "Access-Control-Allow-Origin",
+        "Content-Encoding",
+        "Content-Type"
+      ],
       "target": {
-        "url": "https://dev2.smarter.edenred.io/edge/api/client/features?appName=client&envi",
+        "url": "https://app.unleash-hosted.com/flame/api/client/features?appName=client&envi",
         "method": "GET",
         "headers": {
-          "Origin": "client-app-dev2.smarter.edenred.io"
-        },
-        "authentication": "No Auth"
+          "Origin": "client-app-dev2.smarter.edenred.io",
+          "User-Agent": "Powershell script"
+        }
       },
+      "authentication": "unleash",
       "headersLocation": "Stubs/edge/api/client/features/GET/payload.json.headers",
       "filter": [
         {

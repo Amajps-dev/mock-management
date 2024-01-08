@@ -31,14 +31,14 @@
       {
         "file": "Stubs/dom-client-api/v1/clients/12345/GET/payload.json",
         "headers": ["Content-Disposition", "Header2"],
+        "authentication": "internal_token",
         "target": {
           "url": "http://....dom-client-api/v1/clients/12345",
           "method": "GET",
-          "headers": { 
+          "headers": {
             "key": "value",
             "key2": "value2"
           },
-          "authentication": "internal_token",
           "filter": [
             {
               "path": "data.oneForceAccount.oneforceAccountOneforceId",
@@ -46,17 +46,16 @@
             }
           ]
         }
-  
       },
       {
         "file": "Stubs/edge/api/client/features/GET/payload.json",
+        "authentication": "unleash",
         "target": {
           "url": "https://dev2.smarter.edenred.io/edge/api/client/features?appName=client&envi",
           "method": "GET",
           "headers": {
             "Origin": "client-app-dev2.smarter.edenred.io"
-          },
-          "authentication": "unleash"
+          }
         }
       }
     ]

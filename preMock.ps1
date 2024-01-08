@@ -1,95 +1,235 @@
-# 1-6? 7? 
-# Read JSON data from file
 function ProcessJson {
+
     param (
+
         [Parameter(Mandatory = $true)]
+
         [String]$JsonFilePath,
+
         [Parameter(Mandatory = $true)]
+
         [String]$OutputDirectory
+
     )
 
-    $jsonObject = Get-Content -Raw -Path $JsonFilePath | ConvertFrom-Json
+ 
 
-    # Dictionary/Map to store authorizations
-    $authorizationMap = @{}
+    # Read the configuration file
 
-    # Function to send the request
-    function SendRequest($url, $method, $headers, $bodyData) {
-        Invoke-RestMethod -Uri $url -Method $method -Headers $headers -Body $bodyData
-    }
+    $jsonContent = Get-Content -Raw -Path $JsonFilePath | ConvertFrom-Json
 
-    # Process authentications and store authorization info
-    foreach ($auth in $jsonObject.authentications) {
+    $authDict = @{}
+
+ 
+
+    # Authentication zone
+
+    foreach ($auth in $jsonContent.authentications) {
+
         if ($auth.type -eq "token") {
-            # For token type, set the Authorization directly
-            $authorizationMap[$auth.name] = $auth.token
+
+            $authDict[$auth.name] = $auth.token
+
         } elseif ($auth.type -eq "dom-security") {
-            # For dom-security, make GET call and set Authorization from response
-            Write-Host "Performing dom-security authentication..."
-            $url = "https://smarter-dev2.edenred.net/dom-security-api/v1/connect/login"
+
+            # Extract required parameters and create Uri object
+
+            $tokenURL = $auth.parameters.tokenURL
+
+            $clientId = $auth.parameters.clientId
+
+            $clientSecret = $auth.parameters.clientSecret
+
+ 
+
+            $uri = New-Object System.Uri($tokenURL)
+
+ 
+
+            # Define headers and data
+
             $headers = @{
+
                 "x-tenant" = "fr"
+
                 "Content-Type" = "application/x-www-form-urlencoded"
+
             }
+
             $bodyData = @{
-                "Client_Id" = "developers"
-                "Client_Secret" = "e0194196-5e4a-4044-b050-d1e869522764"
-            }
-            $response = SendRequest -Url $url -Method "POST" -Headers $headers -Body $bodyData
-            $authorizationMap[$auth.name] = $response.access_token
-        }
-    }
 
-    # Resolve and process mocks
-    foreach ($mock in $jsonObject.mocks) {
-        $target = $mock.target
-        $url = $target.url
-        $method = $target.method
-        $authType = $target.authentication
+                "Client_Id" = $clientId
 
-        # Check if the mock data has a body to include in the request
-        $bodyData = $mock.bodyData
-        if ($bodyData -eq $null) {
-            $bodyData = @{} # If no body data specified, set an empty object
-        }
+                "Client_Secret" = $clientSecret
 
-        # Create headers as an ordered dictionary
-        $headers = [ordered]@{}
-        foreach ($header in $target.headers.PSObject.Properties) {
-            $headers[$header.Name] = $header.Value
-        }
-
-        # Add configured headers
-        $headers["Key"] = "Value" # Add your headers here
-
-        # Add authentication based on type
-        if ($authorizationMap.ContainsKey($authType)) {
-            $headers["Authorization"] = $authorizationMap[$authType]
-        }
-
-        # Adding filter if configured
-        if ($mock.filter -ne $null) {
-            $filter = @{
-                "path" = $mock.filter[0].path
-                "value" = $mock.filter[0].value
             }
 
-            # Create a new object and copy all properties from the original mock
-            $newMock = $mock | Select-Object *
-            $newMock.filter = @($filter)  # Set filter field
+ 
 
-            # Replace the original mock with the new one
-            $jsonObject.mocks[$jsonObject.mocks.IndexOf($mock)] = $newMock
+            # Execute GET request to obtain the payload
+
+            try {
+
+                $response = Invoke-RestMethod -Uri $uri -Method GET -Headers $headers
+
+ 
+
+                # Output the response to check if data is received correctly
+
+                Write-Host "Response:"
+
+                Write-Host $response
+
+ 
+
+                # Check if 'Authorization' field exists in the response
+
+                if ($response.Headers.Authorization) {
+
+                    $authDict[$auth.name] = $response.Headers.Authorization
+
+                } else {
+
+                    Write-Host "Authorization field not found in the response headers."
+
+                    # Handle this scenario accordingly
+
+                }
+
+ 
+
+            } catch {
+
+                Write-Host "Error in token authentication: $_"
+
+            }
+
+ 
+
+        } elseif ($auth.type -eq "None") {
+
+            # For 'No Auth' type, set an empty value for authorization
+
+            $authDict[$auth.name] = ""
+
         }
 
-        # Send request
-        Write-Host "Sending mock request to $url with method $method and headers: $($headers | Out-String)"
-        SendRequest -Url $url -Method $method -Headers $headers -Body $bodyData
     }
+
+ 
+
+   # Resolve Mocks
+    foreach ($mock in $jsonContent.mocks) {
+        $requestMethod = $mock.method
+
+        $requestUri = $null
+        try {
+            $requestUri = [System.Uri]::new($mock.url)
+        } catch {
+            Write-Host "Invalid URL format: $($mock.url)"
+            continue
+        }
+
+        if ($authDict.ContainsKey($mock.authentication)) {
+            $requestAuth = $authDict[$mock.authentication]
+        } else {
+            Write-Host "Authentication not found: $($mock.authentication)"
+            continue
+        }
+
+        if ($authDict[$mock.authentication].Type -ne "None") {
+            if ($requestAuth -is [string]) {
+                if ($requestHeaders -eq $null) {
+                    $requestHeaders = @{}
+                }
+                $requestHeaders["Authorization"] = $requestAuth
+            } else {
+                Write-Host "Invalid Authentication value: $requestAuth for $($mock.authentication)"
+                Write-Host "Authentications: $($authDict.Keys -join ', ')"
+                continue
+            }
+        }
+    }
+ 
+
+        # Add Authorization header
+
+        $requestHeaders["Authorization"] = $requestAuth
+
+ 
+
+        try {
+
+            $response = Invoke-RestMethod -Uri $requestUri -Method $requestMethod -Headers $requestHeaders
+
+ 
+
+            # Filter the response if filter is configured
+
+            if ($mock.filter) {
+
+                $response = $response | Select-Object -Property $mock.filter
+
+            }
+
+ 
+
+             # Save the payload to the file
+
+            $payloadFilePath = Join-Path -Path $OutputDirectory -ChildPath $mock.file
+
+            $response | ConvertTo-Json | Set-Content -Path $payloadFilePath
+
+ 
+
+            # Save the response headers if configured
+
+            if ($mock.headersToSave) {
+
+                $headersToSave = @{}
+
+                foreach ($headerName in $mock.headersToSave) {
+
+                    if ($response.Headers[$headerName]) {
+
+                        $headersToSave[$headerName] = $response.Headers[$headerName]
+
+                    }
+
+                }
+
+ 
+
+                # Save the headers to the file with .headers extension
+
+                $headersFilePath = [System.IO.Path]::ChangeExtension($payloadFilePath, "headers")
+
+                $headersToSave | ConvertTo-Json | Set-Content -Path $headersFilePath
+
+            }
+
+           
+
+ 
+
+        } catch {
+
+            Write-Host "Error in processing mock request: $_"
+
+        }
+
+    }
+
 }
 
-# Enter JSON File Path and Output path and execute 
+ 
+
+# Enter JSON File Path and Output path and execute
+
 $jsonPath = Read-Host -Prompt "Enter the JSON file path"
+
 $outputDirectory = Read-Host -Prompt "Enter the output directory"
 
-$authInfo = ProcessJson -JsonFilePath $jsonPath -OutputDirectory $outputDirectory
+ 
+
+ProcessJson -JsonFilePath $jsonPath -OutputDirectory $outputDirectory
